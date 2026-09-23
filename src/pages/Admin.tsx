@@ -21,6 +21,7 @@ interface PerfilResumen {
 type TrabajadorAdmin = Trabajador & { perfiles: PerfilResumen }
 
 interface Metricas {
+  clientes: number
   verificados: number
   disponibles: number
   porEstado: Record<string, number>
@@ -55,11 +56,13 @@ export function Admin() {
 
     const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-    const [{ count: verificados }, { count: disponibles }, { data: reservas }] = await Promise.all([
-      supabase.from('trabajadores').select('id', { count: 'exact', head: true }).eq('verificado', true),
-      supabase.from('trabajadores').select('id', { count: 'exact', head: true }).eq('disponible_ahora', true),
-      supabase.from('reservas').select('estado, total, comision_pct, recargo_materiales').gte('creado_en', desde),
-    ])
+    const [{ count: clientes }, { count: verificados }, { count: disponibles }, { data: reservas }] =
+      await Promise.all([
+        supabase.from('perfiles').select('id', { count: 'exact', head: true }).eq('rol', 'cliente'),
+        supabase.from('trabajadores').select('id', { count: 'exact', head: true }).eq('verificado', true),
+        supabase.from('trabajadores').select('id', { count: 'exact', head: true }).eq('disponible_ahora', true),
+        supabase.from('reservas').select('estado, total, comision_pct, recargo_materiales').gte('creado_en', desde),
+      ])
 
     const porEstado: Record<string, number> = {}
     for (const e of ESTADOS_RESERVA) porEstado[e] = 0
@@ -82,6 +85,7 @@ export function Admin() {
     }
 
     setMetricas({
+      clientes: clientes ?? 0,
       verificados: verificados ?? 0,
       disponibles: disponibles ?? 0,
       porEstado,
@@ -156,6 +160,7 @@ export function Admin() {
 
       {metricas && (
         <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Metrica etiqueta="Clientes registrados" valor={metricas.clientes} />
           <Metrica etiqueta="Verificadas" valor={metricas.verificados} />
           <Metrica etiqueta="Disponibles ahora" valor={metricas.disponibles} />
           <Metrica
