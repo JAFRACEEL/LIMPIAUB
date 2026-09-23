@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
 import { ZONAS, SERVICIOS } from '../lib/constantes'
@@ -25,7 +26,7 @@ export function Buscar() {
       .order('rating_avg', { ascending: false })
       .order('trabajos_completados', { ascending: false })
 
-    if (zona) query = query.eq('zona', zona)
+    if (zona) query = query.contains('zonas', [zona])
     if (servicio) query = query.contains('servicios', [servicio])
     if (soloDisponibles) query = query.eq('disponible_ahora', true)
 
@@ -46,7 +47,15 @@ export function Buscar() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
-      <h1 className="mb-4 text-2xl font-bold">Buscar trabajadoras</h1>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Buscar trabajadoras</h1>
+        <Link
+          to="/reservar"
+          className="shrink-0 rounded-xl bg-teal-700 px-3 py-2 text-sm font-semibold text-white"
+        >
+          Pedir limpieza
+        </Link>
+      </div>
 
       <div className="mb-5 flex flex-col gap-3">
         <select
@@ -95,14 +104,17 @@ export function Buscar() {
       ) : trabajadores.length === 0 ? (
         <p className="rounded-xl bg-neutral-100 px-4 py-6 text-center text-sm text-neutral-500">
           {zona
-            ? `Aún no hay trabajadoras en ${zona}. Prueba con Iquitos centro u otra zona.`
+            ? `Aún no hay trabajadoras en ${zona}. Prueba con Iquitos u otra zona.`
             : 'Aún no hay trabajadoras disponibles con esos filtros.'}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
           {trabajadores.map((t) => (
             <li key={t.id}>
-              <div className="flex gap-3 rounded-xl border border-neutral-200 bg-white p-3">
+              <Link
+                to={`/t/${t.id}`}
+                className="flex gap-3 rounded-xl border border-neutral-200 bg-white p-3"
+              >
                 <img
                   src={t.foto_url ?? 'https://placehold.co/64x64?text=%20'}
                   alt={t.nombre}
@@ -117,14 +129,14 @@ export function Buscar() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-neutral-500">{t.zona}</p>
+                  <p className="text-sm text-neutral-500">{t.zonas.join(' · ')}</p>
                   <Estrellas promedio={t.rating_avg} cantidad={t.rating_n} />
                   <p className="mt-1 text-sm font-semibold text-teal-700">
                     S/ {t.tarifa_hora.toFixed(2)} / hora
                   </p>
                   <p className="truncate text-xs text-neutral-500">{t.servicios.join(' · ')}</p>
                 </div>
-              </div>
+              </Link>
             </li>
           ))}
         </ul>

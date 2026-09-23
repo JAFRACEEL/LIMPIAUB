@@ -1,0 +1,15 @@
+{
+  "name": "Limpi — Limpieza doméstica en Iquitos",
+  "short_name": "Limpi",
+  "description": "Encuentra y reserva trabajadoras de limpieza por horas en Iquitos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f766e",
+  "lang": "es-PE",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

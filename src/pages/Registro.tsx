@@ -2,10 +2,36 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
-import { ZONAS, SERVICIOS, ANTECEDENTES } from '../lib/constantes'
-import { esDniValido, esCelularValido, esTarifaValida } from '../lib/validadores'
+import {
+  ZONAS,
+  MAX_ZONAS_TRABAJADOR,
+  SERVICIOS,
+  ANTECEDENTES,
+  GENEROS,
+  NACIONALIDADES,
+  TIPOS_DOCUMENTO_EXTRANJERA,
+} from '../lib/constantes'
+import {
+  esNumeroDocumentoValido,
+  esCelularValido,
+  esTarifaValida,
+  sonZonasValidas,
+  esFechaFuturaValida,
+} from '../lib/validadores'
 import { guardarPendiente } from '../lib/registroPendiente'
-import type { Rol } from '../types'
+import type { Rol, Nacionalidad, Genero, TipoDocumento, EstadoMigratorio } from '../types'
+
+async function subirArchivo(
+  bucket: string,
+  userId: string,
+  file: File,
+  prefijo: string,
+): Promise<string | null> {
+  const extension = file.name.split('.').pop() ?? 'jpg'
+  const ruta = `${userId}/${prefijo}-${Date.now()}.${extension}`
+  const { error } = await supabase.storage.from(bucket).upload(ruta, file, { upsert: true })
+  return error ? null : ruta
+}
 
 export function Registro() {
   const navigate = useNavigate()
@@ -15,16 +41,31 @@ export function Registro() {
   const [password, setPassword] = useState('')
   const [nombre, setNombre] = useState('')
   const [celular, setCelular] = useState('')
-  const [zona, setZona] = useState('')
   const [direccion, setDireccion] = useState('')
+  const [zona, setZona] = useState('')
 
-  const [dni, setDni] = useState('')
+  const [genero, setGenero] = useState('')
+  const [nacionalidad, setNacionalidad] = useState<Nacionalidad>('peruana')
+  const [tipoDocumento, setTipoDocumento] = useState('dni')
+  const [numeroDocumento, setNumeroDocumento] = useState('')
+  const [cuentaAutorizacion, setCuentaAutorizacion] = useState('')
+  const [docNumero, setDocNumero] = useState('')
+  const [docVencimiento, setDocVencimiento] = useState('')
+  const [docFrontal, setDocFrontal] = useState<File | null>(null)
+  const [docPosterior, setDocPosterior] = useState<File | null>(null)
+  const [docConstancia, setDocConstancia] = useState<File | null>(null)
+
+  const [zonas, setZonas] = useState<string[]>([])
   const [servicios, setServicios] = useState<string[]>([])
   const [tarifaHora, setTarifaHora] = useState('')
   const [experiencia, setExperiencia] = useState('')
+  const [cv, setCv] = useState<File | null>(null)
   const [antecedentes, setAntecedentes] = useState('')
-  const [referencia1, setReferencia1] = useState('')
-  const [referencia2, setReferencia2] = useState('')
+  const [antecedentesDoc, setAntecedentesDoc] = useState<File | null>(null)
+  const [referencia1Nombre, setReferencia1Nombre] = useState('')
+  const [referencia1Celular, setReferencia1Celular] = useState('')
+  const [referencia2Nombre, setReferencia2Nombre] = useState('')
+  const [referencia2Celular, setReferencia2Celular] = useState('')
   const [foto, setFoto] = useState<File | null>(null)
   const [aceptaVerificacion, setAceptaVerificacion] = useState(false)
 
@@ -35,21 +76,75 @@ export function Registro() {
     setServicios((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]))
   }
 
+  function alternarZona(z: string) {
+    setZonas((prev) => {
+      if (prev.includes(z)) return prev.filter((x) => x !== z)
+      if (prev.length >= MAX_ZONAS_TRABAJADOR) return prev
+      return [...prev, z]
+    })
+  }
+
+  function cambiarNacionalidad(valor: Nacionalidad) {
+    setNacionalidad(valor)
+    if (valor === 'peruana') {
+      setTipoDocumento('dni')
+      setCuentaAutorizacion('')
+      setDocNumero('')
+      setDocVencimiento('')
+      setDocFrontal(null)
+      setDocPosterior(null)
+      setDocConstancia(null)
+    } else {
+      setTipoDocumento('')
+    }
+  }
+
   function validar(): string | null {
-    if (!nombre.trim()) return 'Escribe tu nombre completo.'
+    if (!nombre.trim()) return rol === 'trabajador' ? 'Escribe tus nombres y apellidos.' : 'Escribe tu nombre completo.'
     if (!esCelularValido(celular)) return 'El celular debe tener 9 dígitos y empezar con 9.'
-    if (!zona) return 'Elige tu zona.'
+    if (!direccion.trim()) return 'Escribe tu dirección.'
     if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres.'
 
-    if (rol === 'cliente' && !direccion.trim()) return 'Escribe tu dirección.'
+    if (rol === 'cliente' && !zona) return 'Elige tu zona.'
 
     if (rol === 'trabajador') {
-      if (!esDniValido(dni)) return 'El DNI debe tener 8 dígitos.'
+      if (!genero) return 'Elige tu género.'
+      if (!tipoDocumento) return 'Elige tu tipo de documento.'
+      if (!esNumeroDocumentoValido(tipoDocumento, numeroDocumento)) {
+        return tipoDocumento === 'dni'
+          ? 'El DNI debe tener 8 dígitos.'
+          : 'Escribe un número de documento válido.'
+      }
+
+      if (nacionalidad === 'extranjera') {
+        if (!cuentaAutorizacion) {
+          return '¿Cuenta con una calidad migratoria o autorización vigente que le permita trabajar en el Perú? Elige Sí o No.'
+        }
+        if (cuentaAutorizacion === 'si') {
+          if (!docNumero.trim()) return 'Escribe el número del documento que acredita tu autorización.'
+          if (!esFechaFuturaValida(docVencimiento)) {
+            return 'La fecha de vencimiento del documento debe ser una fecha futura.'
+          }
+          if (!docFrontal) return 'Adjunta la foto frontal de tu documento.'
+          if (!docConstancia) {
+            return 'Adjunta el documento o constancia que acredite tu autorización para trabajar.'
+          }
+        }
+      }
+
+      if (!sonZonasValidas(zonas, MAX_ZONAS_TRABAJADOR)) {
+        return `Elige entre 1 y ${MAX_ZONAS_TRABAJADOR} zonas de atención.`
+      }
       if (servicios.length === 0) return 'Elige al menos un servicio que ofreces.'
       const tarifa = Number(tarifaHora)
       if (!esTarifaValida(tarifa)) return 'La tarifa por hora debe estar entre S/ 5 y S/ 100.'
       if (!antecedentes) return 'Indica el estado de tus antecedentes penales.'
-      if (!referencia1.trim() || !referencia2.trim()) return 'Escribe tus 2 referencias.'
+      if (!referencia1Nombre.trim() || !esCelularValido(referencia1Celular)) {
+        return 'Completa el nombre y celular (9 dígitos) de tu primera referencia.'
+      }
+      if (!referencia2Nombre.trim() || !esCelularValido(referencia2Celular)) {
+        return 'Completa el nombre y celular (9 dígitos) de tu segunda referencia.'
+      }
       if (!aceptaVerificacion) return 'Debes aceptar el proceso de verificación de Limpi.'
     }
 
@@ -75,25 +170,40 @@ export function Registro() {
       return
     }
 
-    const referencias = `${referencia1.trim()}; ${referencia2.trim()}`
+    const estadoMigratorio: EstadoMigratorio =
+      rol === 'trabajador' && nacionalidad === 'extranjera' ? 'pendiente_validacion' : 'no_aplica'
 
     // Sin sesión activa todavía significa que Supabase exige confirmar el
     // correo antes de dejar entrar. Guardamos los datos y los completamos en
-    // el primer login (ver AuthContext.cargarPerfil).
+    // el primer login (ver AuthContext.cargarPerfil). Los archivos (foto, CV,
+    // antecedentes, documentos migratorios) no sobreviven este camino: se
+    // deberán volver a adjuntar desde el panel una vez confirmada la cuenta.
     if (!data.session) {
       guardarPendiente({
         email,
         rol,
         nombre,
         telefono: celular,
-        zona,
-        direccion: rol === 'cliente' ? direccion : undefined,
-        dni: rol === 'trabajador' ? dni : undefined,
+        zona: rol === 'cliente' ? zona : (zonas[0] ?? ''),
+        direccion,
+        genero: rol === 'trabajador' ? (genero as Genero) : undefined,
+        nacionalidad: rol === 'trabajador' ? nacionalidad : undefined,
+        tipo_documento: rol === 'trabajador' ? (tipoDocumento as TipoDocumento) : undefined,
+        numero_documento: rol === 'trabajador' ? numeroDocumento : undefined,
+        zonas: rol === 'trabajador' ? zonas : undefined,
         servicios: rol === 'trabajador' ? servicios : undefined,
         tarifa_hora: rol === 'trabajador' ? Number(tarifaHora) : undefined,
         experiencia: rol === 'trabajador' ? experiencia : undefined,
         antecedentes: rol === 'trabajador' ? antecedentes : undefined,
-        referencias: rol === 'trabajador' ? referencias : undefined,
+        cuenta_autorizacion_migratoria:
+          rol === 'trabajador' && nacionalidad === 'extranjera' ? cuentaAutorizacion === 'si' : undefined,
+        estado_migratorio: rol === 'trabajador' ? estadoMigratorio : undefined,
+        doc_migratorio_numero: cuentaAutorizacion === 'si' ? docNumero : undefined,
+        doc_migratorio_vencimiento: cuentaAutorizacion === 'si' ? docVencimiento : undefined,
+        referencia1_nombre: rol === 'trabajador' ? referencia1Nombre : undefined,
+        referencia1_celular: rol === 'trabajador' ? referencia1Celular : undefined,
+        referencia2_nombre: rol === 'trabajador' ? referencia2Nombre : undefined,
+        referencia2_celular: rol === 'trabajador' ? referencia2Celular : undefined,
       })
       setEnviando(false)
       setError(null)
@@ -106,14 +216,8 @@ export function Registro() {
     let fotoUrl: string | null = null
 
     if (rol === 'trabajador' && foto) {
-      const extension = foto.name.split('.').pop() ?? 'jpg'
-      const ruta = `${userId}/${Date.now()}.${extension}`
-      const { error: errorSubida } = await supabase.storage.from('fotos').upload(ruta, foto, {
-        upsert: true,
-      })
-      if (!errorSubida) {
-        fotoUrl = supabase.storage.from('fotos').getPublicUrl(ruta).data.publicUrl
-      }
+      const ruta = await subirArchivo('fotos', userId, foto, 'foto')
+      if (ruta) fotoUrl = supabase.storage.from('fotos').getPublicUrl(ruta).data.publicUrl
     }
 
     const { error: errorPerfil } = await supabase.from('perfiles').insert({
@@ -121,8 +225,8 @@ export function Registro() {
       rol,
       nombre,
       telefono: celular,
-      zona,
-      direccion: rol === 'cliente' ? direccion : null,
+      zona: rol === 'cliente' ? zona : zonas[0],
+      direccion,
       foto_url: fotoUrl,
     })
 
@@ -133,14 +237,38 @@ export function Registro() {
     }
 
     if (rol === 'trabajador') {
+      const [cvRuta, antecedentesDocRuta, docFrontalRuta, docPosteriorRuta, docConstanciaRuta] = await Promise.all([
+        cv ? subirArchivo('documentos', userId, cv, 'cv') : Promise.resolve(null),
+        antecedentesDoc ? subirArchivo('documentos', userId, antecedentesDoc, 'antecedentes') : Promise.resolve(null),
+        docFrontal ? subirArchivo('documentos', userId, docFrontal, 'doc-frontal') : Promise.resolve(null),
+        docPosterior ? subirArchivo('documentos', userId, docPosterior, 'doc-posterior') : Promise.resolve(null),
+        docConstancia ? subirArchivo('documentos', userId, docConstancia, 'doc-constancia') : Promise.resolve(null),
+      ])
+
       const { error: errorTrabajador } = await supabase.from('trabajadores').insert({
         id: userId,
-        dni,
+        genero,
+        nacionalidad,
+        tipo_documento: tipoDocumento,
+        numero_documento: numeroDocumento,
+        zonas,
         servicios,
         tarifa_hora: Number(tarifaHora),
         experiencia: experiencia || null,
+        cv_ruta: cvRuta,
         antecedentes,
-        referencias,
+        antecedentes_doc_ruta: antecedentesDocRuta,
+        cuenta_autorizacion_migratoria: nacionalidad === 'extranjera' ? cuentaAutorizacion === 'si' : null,
+        estado_migratorio: estadoMigratorio,
+        doc_migratorio_numero: cuentaAutorizacion === 'si' ? docNumero : null,
+        doc_migratorio_vencimiento: cuentaAutorizacion === 'si' ? docVencimiento : null,
+        doc_migratorio_frontal_ruta: docFrontalRuta,
+        doc_migratorio_posterior_ruta: docPosteriorRuta,
+        doc_migratorio_constancia_ruta: docConstanciaRuta,
+        referencia1_nombre: referencia1Nombre,
+        referencia1_celular: referencia1Celular,
+        referencia2_nombre: referencia2Nombre,
+        referencia2_celular: referencia2Celular,
       })
       if (errorTrabajador) {
         setError(traducirError(errorTrabajador))
@@ -184,7 +312,7 @@ export function Registro() {
       </div>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Campo etiqueta="Nombre completo">
+        <Campo etiqueta={rol === 'trabajador' ? 'Nombres y apellidos' : 'Nombre completo'}>
           <input
             required
             value={nombre}
@@ -193,6 +321,149 @@ export function Registro() {
             placeholder="Ej. María Pérez"
           />
         </Campo>
+
+        {rol === 'trabajador' && (
+          <>
+            <Campo etiqueta="Género">
+              <select value={genero} onChange={(e) => setGenero(e.target.value)} className="input" required>
+                <option value="">Elige una opción</option>
+                {GENEROS.map((g) => (
+                  <option key={g.value} value={g.value}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+
+            <Campo etiqueta="Nacionalidad">
+              <select
+                value={nacionalidad}
+                onChange={(e) => cambiarNacionalidad(e.target.value as Nacionalidad)}
+                className="input"
+                required
+              >
+                {NACIONALIDADES.map((n) => (
+                  <option key={n.value} value={n.value}>
+                    {n.label}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+
+            {nacionalidad === 'peruana' ? (
+              <Campo etiqueta="DNI">
+                <input
+                  required
+                  inputMode="numeric"
+                  maxLength={8}
+                  value={numeroDocumento}
+                  onChange={(e) => setNumeroDocumento(e.target.value)}
+                  className="input"
+                  placeholder="8 dígitos"
+                />
+              </Campo>
+            ) : (
+              <>
+                <Campo etiqueta="Tipo de documento de identidad">
+                  <select
+                    required
+                    value={tipoDocumento}
+                    onChange={(e) => setTipoDocumento(e.target.value)}
+                    className="input"
+                  >
+                    <option value="">Elige una opción</option>
+                    {TIPOS_DOCUMENTO_EXTRANJERA.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </Campo>
+
+                <Campo etiqueta="Número de documento">
+                  <input
+                    required
+                    value={numeroDocumento}
+                    onChange={(e) => setNumeroDocumento(e.target.value)}
+                    className="input"
+                    placeholder="Número de tu documento"
+                  />
+                </Campo>
+
+                <Campo etiqueta="¿Cuenta con una calidad migratoria o autorización vigente que le permita trabajar en el Perú?">
+                  <select
+                    required
+                    value={cuentaAutorizacion}
+                    onChange={(e) => setCuentaAutorizacion(e.target.value)}
+                    className="input"
+                  >
+                    <option value="">Elige una opción</option>
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                  </select>
+                </Campo>
+
+                {cuentaAutorizacion === 'no' && (
+                  <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    Puedes continuar con tu registro. Tu solicitud quedará como "Pendiente de
+                    validación para trabajar": no podrás recibir pedidos hasta que Limpi valide tu
+                    autorización para trabajar en el Perú.
+                  </p>
+                )}
+
+                {cuentaAutorizacion === 'si' && (
+                  <div className="flex flex-col gap-4 rounded-xl border border-neutral-300 p-3">
+                    <Campo etiqueta="Número del documento que acredita tu autorización">
+                      <input
+                        required
+                        value={docNumero}
+                        onChange={(e) => setDocNumero(e.target.value)}
+                        className="input"
+                      />
+                    </Campo>
+                    <Campo etiqueta="Fecha de vencimiento del documento">
+                      <input
+                        required
+                        type="date"
+                        value={docVencimiento}
+                        onChange={(e) => setDocVencimiento(e.target.value)}
+                        className="input"
+                      />
+                    </Campo>
+                    <Campo etiqueta="Foto del documento (parte frontal)">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setDocFrontal(e.target.files?.[0] ?? null)}
+                        className="text-sm"
+                      />
+                    </Campo>
+                    <Campo etiqueta="Foto del documento (parte posterior, cuando corresponda)">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setDocPosterior(e.target.files?.[0] ?? null)}
+                        className="text-sm"
+                      />
+                    </Campo>
+                    <Campo etiqueta="Documento o constancia que acredite tu autorización o condición migratoria para trabajar">
+                      <input
+                        type="file"
+                        accept="image/*,.pdf"
+                        onChange={(e) => setDocConstancia(e.target.files?.[0] ?? null)}
+                        className="text-sm"
+                      />
+                    </Campo>
+                    <p className="text-xs text-neutral-500">
+                      Aun así, no quedarás habilitada/o para aceptar servicios hasta que Limpi
+                      valide tu autorización para trabajar en el Perú.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
 
         <Campo etiqueta="Celular">
           <input
@@ -205,41 +476,53 @@ export function Registro() {
           />
         </Campo>
 
-        <Campo etiqueta="Zona">
-          <select value={zona} onChange={(e) => setZona(e.target.value)} className="input" required>
-            <option value="">Elige tu zona</option>
-            {ZONAS.map((z) => (
-              <option key={z} value={z}>
-                {z}
-              </option>
-            ))}
-          </select>
+        <Campo etiqueta={rol === 'trabajador' ? 'Dirección de vivienda actual' : 'Dirección'}>
+          <input
+            required
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            className="input"
+            placeholder="Jirón / calle, número, referencia"
+          />
         </Campo>
 
         {rol === 'cliente' && (
-          <Campo etiqueta="Dirección">
-            <input
-              required
-              value={direccion}
-              onChange={(e) => setDireccion(e.target.value)}
-              className="input"
-              placeholder="Jirón / calle, número, referencia"
-            />
+          <Campo etiqueta="Zona">
+            <select value={zona} onChange={(e) => setZona(e.target.value)} className="input" required>
+              <option value="">Elige tu zona</option>
+              {ZONAS.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
+              ))}
+            </select>
           </Campo>
         )}
 
         {rol === 'trabajador' && (
           <>
-            <Campo etiqueta="DNI">
-              <input
-                required
-                inputMode="numeric"
-                maxLength={8}
-                value={dni}
-                onChange={(e) => setDni(e.target.value)}
-                className="input"
-                placeholder="8 dígitos"
-              />
+            <Campo etiqueta={`📍 Zonas de atención (elige hasta ${MAX_ZONAS_TRABAJADOR})`}>
+              <div className="flex flex-col gap-2 rounded-xl border border-neutral-300 p-3">
+                {ZONAS.map((z) => {
+                  const seleccionada = zonas.includes(z)
+                  const deshabilitada = !seleccionada && zonas.length >= MAX_ZONAS_TRABAJADOR
+                  return (
+                    <label
+                      key={z}
+                      className={`flex items-center gap-2 text-sm ${deshabilitada ? 'opacity-40' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={seleccionada}
+                        disabled={deshabilitada}
+                        onChange={() => alternarZona(z)}
+                        className="h-4 w-4 accent-teal-700"
+                      />
+                      {z}
+                    </label>
+                  )
+                })}
+              </div>
             </Campo>
 
             <Campo etiqueta="Servicios que ofreces">
@@ -281,6 +564,15 @@ export function Registro() {
               />
             </Campo>
 
+            <Campo etiqueta="Adjuntar CV (opcional)">
+              <input
+                type="file"
+                accept="image/*,.pdf,.doc,.docx"
+                onChange={(e) => setCv(e.target.files?.[0] ?? null)}
+                className="text-sm"
+              />
+            </Campo>
+
             <Campo etiqueta="Antecedentes penales">
               <select
                 required
@@ -297,23 +589,52 @@ export function Registro() {
               </select>
             </Campo>
 
-            <Campo etiqueta="Referencia 1 (nombre y celular)">
+            <Campo etiqueta="Adjuntar documento de antecedentes penales (opcional)">
               <input
-                required
-                value={referencia1}
-                onChange={(e) => setReferencia1(e.target.value)}
-                className="input"
-                placeholder="Ej. Juan Ramírez - 987654321"
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => setAntecedentesDoc(e.target.files?.[0] ?? null)}
+                className="text-sm"
               />
             </Campo>
 
-            <Campo etiqueta="Referencia 2 (nombre y celular)">
+            <Campo etiqueta="Referencia laboral 1 - nombre">
               <input
                 required
-                value={referencia2}
-                onChange={(e) => setReferencia2(e.target.value)}
+                value={referencia1Nombre}
+                onChange={(e) => setReferencia1Nombre(e.target.value)}
                 className="input"
-                placeholder="Ej. Rosa Vela - 987654322"
+                placeholder="Ej. Juan Ramírez"
+              />
+            </Campo>
+            <Campo etiqueta="Referencia laboral 1 - celular">
+              <input
+                required
+                inputMode="numeric"
+                value={referencia1Celular}
+                onChange={(e) => setReferencia1Celular(e.target.value)}
+                className="input"
+                placeholder="9XXXXXXXX"
+              />
+            </Campo>
+
+            <Campo etiqueta="Referencia laboral 2 - nombre">
+              <input
+                required
+                value={referencia2Nombre}
+                onChange={(e) => setReferencia2Nombre(e.target.value)}
+                className="input"
+                placeholder="Ej. Rosa Vela"
+              />
+            </Campo>
+            <Campo etiqueta="Referencia laboral 2 - celular">
+              <input
+                required
+                inputMode="numeric"
+                value={referencia2Celular}
+                onChange={(e) => setReferencia2Celular(e.target.value)}
+                className="input"
+                placeholder="9XXXXXXXX"
               />
             </Campo>
 

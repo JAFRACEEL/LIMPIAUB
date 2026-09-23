@@ -20,13 +20,23 @@ export function Navbar() {
         {session && (
           <div className="flex items-center gap-3 text-sm">
             {perfil?.rol === 'cliente' && (
-              <Link to="/buscar" className="text-neutral-600">
-                Buscar
-              </Link>
+              <>
+                <Link to="/buscar" className="text-neutral-600">
+                  Buscar
+                </Link>
+                <Link to="/reservas" className="text-neutral-600">
+                  Mis reservas
+                </Link>
+              </>
             )}
             {perfil?.rol === 'trabajador' && (
               <Link to="/panel" className="text-neutral-600">
                 Mi panel
+              </Link>
+            )}
+            {perfil?.rol === 'admin' && (
+              <Link to="/admin" className="text-neutral-600">
+                Admin
               </Link>
             )}
             <button onClick={salir} className="font-medium text-neutral-500">

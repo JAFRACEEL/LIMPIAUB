@@ -1,0 +1,321 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+import { traducirError } from '../lib/errores'
+import {
+  etiquetaTipoDocumento,
+  etiquetaAntecedentes,
+  etiquetaGenero,
+  NACIONALIDADES,
+} from '../lib/constantes'
+import { calcularComision } from '../lib/calculos'
+import { KitCredito } from '../components/KitCredito'
+import type { Trabajador } from '../types'
+
+interface PerfilResumen {
+  nombre: string
+  telefono: string
+  direccion: string | null
+  foto_url: string | null
+}
+
+type TrabajadorAdmin = Trabajador & { perfiles: PerfilResumen }
+
+interface Metricas {
+  verificados: number
+  disponibles: number
+  porEstado: Record<string, number>
+  tasaAceptacion: number | null
+  ingresoComision: number
+}
+
+const ESTADOS_RESERVA = ['solicitada', 'aceptada', 'en_curso', 'completada', 'cancelada', 'rechazada']
+
+export function Admin() {
+  const [pendientes, setPendientes] = useState<TrabajadorAdmin[]>([])
+  const [metricas, setMetricas] = useState<Metricas | null>(null)
+  const [cargando, setCargando] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [procesando, setProcesando] = useState<string | null>(null)
+
+  async function cargar() {
+    setCargando(true)
+    setError(null)
+
+    const { data: trabajadores, error: errorTrab } = await supabase
+      .from('trabajadores')
+      .select('*, perfiles!inner(nombre, telefono, direccion, foto_url)')
+      .or('and(verificado.eq.false,verificacion_rechazada.eq.false),estado_migratorio.eq.pendiente_validacion')
+
+    if (errorTrab) {
+      setError(traducirError(errorTrab))
+      setCargando(false)
+      return
+    }
+    setPendientes((trabajadores as TrabajadorAdmin[]) ?? [])
+
+    const desde = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+
+    const [{ count: verificados }, { count: disponibles }, { data: reservas }] = await Promise.all([
+      supabase.from('trabajadores').select('id', { count: 'exact', head: true }).eq('verificado', true),
+      supabase.from('trabajadores').select('id', { count: 'exact', head: true }).eq('disponible_ahora', true),
+      supabase.from('reservas').select('estado, total, comision_pct, recargo_materiales').gte('creado_en', desde),
+    ])
+
+    const porEstado: Record<string, number> = {}
+    for (const e of ESTADOS_RESERVA) porEstado[e] = 0
+    let decididas = 0
+    let rechazadas = 0
+    let ingresoComision = 0
+    for (const r of reservas ?? []) {
+      porEstado[r.estado] = (porEstado[r.estado] ?? 0) + 1
+      // Solo cuenta lo que sí tuvo una respuesta de alguna trabajadora
+      // (cancelada no es un rechazo ni una aceptación: la clienta se echó
+      // para atrás antes de eso).
+      if (['aceptada', 'en_curso', 'completada', 'rechazada'].includes(r.estado)) {
+        decididas += 1
+        if (r.estado === 'rechazada') rechazadas += 1
+      }
+      if (r.estado === 'completada' && r.total != null) {
+        const subtotalServicio = r.total - r.recargo_materiales
+        ingresoComision += calcularComision(subtotalServicio, r.comision_pct, r.recargo_materiales).comisionLimpi
+      }
+    }
+
+    setMetricas({
+      verificados: verificados ?? 0,
+      disponibles: disponibles ?? 0,
+      porEstado,
+      tasaAceptacion: decididas > 0 ? ((decididas - rechazadas) / decididas) * 100 : null,
+      ingresoComision,
+    })
+
+    setCargando(false)
+  }
+
+  useEffect(() => {
+    cargar()
+  }, [])
+
+  async function verDocumento(ruta: string | null) {
+    if (!ruta) return
+    const { data, error } = await supabase.storage.from('documentos').createSignedUrl(ruta, 300)
+    if (error || !data) {
+      alert(traducirError(error ?? new Error('No se pudo abrir el documento.')))
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  async function verificar(id: string) {
+    setProcesando(id)
+    const { error } = await supabase
+      .from('trabajadores')
+      .update({ verificado: true, verificacion_rechazada: false, motivo_rechazo: null })
+      .eq('id', id)
+    if (error) alert(traducirError(error))
+    setProcesando(null)
+    cargar()
+  }
+
+  async function rechazarVerificacion(id: string) {
+    const motivo = window.prompt('Motivo del rechazo (se guarda para referencia interna):') ?? ''
+    setProcesando(id)
+    const { error } = await supabase
+      .from('trabajadores')
+      .update({ verificado: false, verificacion_rechazada: true, motivo_rechazo: motivo || null })
+      .eq('id', id)
+    if (error) alert(traducirError(error))
+    setProcesando(null)
+    cargar()
+  }
+
+  async function validarMigratorio(id: string) {
+    setProcesando(id)
+    const { error } = await supabase.from('trabajadores').update({ estado_migratorio: 'validado' }).eq('id', id)
+    if (error) alert(traducirError(error))
+    setProcesando(null)
+    cargar()
+  }
+
+  async function rechazarMigratorio(id: string) {
+    setProcesando(id)
+    const { error } = await supabase.from('trabajadores').update({ estado_migratorio: 'rechazado' }).eq('id', id)
+    if (error) alert(traducirError(error))
+    setProcesando(null)
+    cargar()
+  }
+
+  if (cargando) return <div className="p-6 text-center text-neutral-500">Cargando panel de admin…</div>
+
+  return (
+    <div className="mx-auto max-w-2xl px-4 py-6">
+      <h1 className="mb-1 text-2xl font-bold">Panel de admin</h1>
+      <p className="mb-6 text-neutral-500">Verificación de trabajadoras y métricas de la plataforma.</p>
+
+      {error && <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+
+      {metricas && (
+        <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <Metrica etiqueta="Verificadas" valor={metricas.verificados} />
+          <Metrica etiqueta="Disponibles ahora" valor={metricas.disponibles} />
+          <Metrica
+            etiqueta="Tasa de aceptación (7 días)"
+            valor={metricas.tasaAceptacion === null ? '—' : `${metricas.tasaAceptacion.toFixed(0)}%`}
+          />
+          <Metrica etiqueta="Ingreso por comisión (7 días)" valor={`S/ ${metricas.ingresoComision.toFixed(2)}`} />
+          {ESTADOS_RESERVA.map((e) => (
+            <Metrica key={e} etiqueta={`Reservas ${e} (7 días)`} valor={metricas.porEstado[e] ?? 0} />
+          ))}
+        </div>
+      )}
+
+      <h2 className="mb-3 text-lg font-semibold">Pendientes de revisión</h2>
+
+      {pendientes.length === 0 ? (
+        <p className="rounded-xl bg-neutral-100 px-4 py-6 text-center text-sm text-neutral-500">
+          No hay trabajadoras pendientes de revisión.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-4">
+          {pendientes.map((t) => {
+            const nacionalidadLabel = NACIONALIDADES.find((n) => n.value === t.nacionalidad)?.label ?? t.nacionalidad
+            const necesitaVerificacion = !t.verificado && !t.verificacion_rechazada
+            const necesitaMigratorio = t.estado_migratorio === 'pendiente_validacion'
+
+            return (
+              <li key={t.id} className="rounded-2xl border border-neutral-200 bg-white p-4">
+                <div className="flex gap-3">
+                  <img
+                    src={t.perfiles.foto_url ?? 'https://placehold.co/64x64?text=%20'}
+                    alt={t.perfiles.nombre}
+                    className="h-16 w-16 shrink-0 rounded-full object-cover"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">{t.perfiles.nombre}</p>
+                    <p className="text-sm text-neutral-500">
+                      {etiquetaGenero(t.genero)} · {nacionalidadLabel}
+                    </p>
+                    <p className="text-sm text-neutral-500">{t.perfiles.telefono}</p>
+                  </div>
+                </div>
+
+                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-sm">
+                  <Dato etiqueta="Documento" valor={`${etiquetaTipoDocumento(t.tipo_documento)}: ${t.numero_documento}`} />
+                  <Dato etiqueta="Dirección" valor={t.perfiles.direccion ?? '—'} />
+                  <Dato etiqueta="Zonas" valor={t.zonas.join(', ')} />
+                  <Dato etiqueta="Servicios" valor={t.servicios.join(', ')} />
+                  <Dato etiqueta="Tarifa" valor={`S/ ${t.tarifa_hora.toFixed(2)}/h`} />
+                  <Dato etiqueta="Antecedentes" valor={etiquetaAntecedentes(t.antecedentes)} />
+                  <Dato etiqueta="Referencia 1" valor={`${t.referencia1_nombre ?? '—'} · ${t.referencia1_celular ?? '—'}`} />
+                  <Dato etiqueta="Referencia 2" valor={`${t.referencia2_nombre ?? '—'} · ${t.referencia2_celular ?? '—'}`} />
+                </dl>
+
+                {t.experiencia && <p className="mt-2 text-sm text-neutral-600">{t.experiencia}</p>}
+
+                <div className="mt-3 flex flex-wrap gap-2 text-sm">
+                  {t.cv_ruta && <BotonDoc etiqueta="Ver CV" onClick={() => verDocumento(t.cv_ruta)} />}
+                  {t.antecedentes_doc_ruta && (
+                    <BotonDoc etiqueta="Ver doc. antecedentes" onClick={() => verDocumento(t.antecedentes_doc_ruta)} />
+                  )}
+                </div>
+
+                {necesitaVerificacion && (
+                  <div className="mt-4 flex gap-2 border-t border-neutral-100 pt-3">
+                    <button
+                      disabled={procesando === t.id}
+                      onClick={() => verificar(t.id)}
+                      className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                    >
+                      Verificar
+                    </button>
+                    <button
+                      disabled={procesando === t.id}
+                      onClick={() => rechazarVerificacion(t.id)}
+                      className="flex-1 rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-60"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                )}
+
+                {necesitaMigratorio && (
+                  <div className="mt-4 border-t border-neutral-100 pt-3">
+                    <p className="mb-2 text-sm font-medium text-amber-800">
+                      Autorización para trabajar en Perú: pendiente de validación
+                      {t.cuenta_autorizacion_migratoria === false && ' (la persona indicó que aún no cuenta con ella)'}
+                    </p>
+                    {t.doc_migratorio_numero && (
+                      <p className="mb-2 text-sm text-neutral-600">
+                        Doc. {t.doc_migratorio_numero} · vence{' '}
+                        {t.doc_migratorio_vencimiento ?? '—'}
+                      </p>
+                    )}
+                    <div className="mb-3 flex flex-wrap gap-2 text-sm">
+                      {t.doc_migratorio_frontal_ruta && (
+                        <BotonDoc etiqueta="Ver frontal" onClick={() => verDocumento(t.doc_migratorio_frontal_ruta)} />
+                      )}
+                      {t.doc_migratorio_posterior_ruta && (
+                        <BotonDoc etiqueta="Ver posterior" onClick={() => verDocumento(t.doc_migratorio_posterior_ruta)} />
+                      )}
+                      {t.doc_migratorio_constancia_ruta && (
+                        <BotonDoc etiqueta="Ver constancia" onClick={() => verDocumento(t.doc_migratorio_constancia_ruta)} />
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        disabled={procesando === t.id}
+                        onClick={() => validarMigratorio(t.id)}
+                        className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                      >
+                        Validar autorización
+                      </button>
+                      <button
+                        disabled={procesando === t.id}
+                        onClick={() => rechazarMigratorio(t.id)}
+                        className="flex-1 rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-60"
+                      >
+                        Rechazar
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <KitCredito />
+    </div>
+  )
+}
+
+function Metrica({ etiqueta, valor }: { etiqueta: string; valor: string | number }) {
+  return (
+    <div className="rounded-xl bg-neutral-100 p-3 text-center">
+      <dt className="text-xs text-neutral-500">{etiqueta}</dt>
+      <dd className="font-semibold">{valor}</dd>
+    </div>
+  )
+}
+
+function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
+  return (
+    <div>
+      <dt className="text-xs text-neutral-500">{etiqueta}</dt>
+      <dd className="truncate text-neutral-800">{valor}</dd>
+    </div>
+  )
+}
+
+function BotonDoc({ etiqueta, onClick }: { etiqueta: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700"
+    >
+      {etiqueta}
+    </button>
+  )
+}
