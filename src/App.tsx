@@ -17,7 +17,22 @@ function Inicio() {
   if (!session) return <Navigate to="/login" replace />
   if (perfil?.rol === 'trabajador') return <Navigate to="/panel" replace />
   if (perfil?.rol === 'admin') return <Navigate to="/admin" replace />
-  return <Navigate to="/buscar" replace />
+  if (perfil?.rol === 'cliente') return <Navigate to="/buscar" replace />
+  // Hay sesión pero no encontramos tu fila en `perfiles`: mandarte al lado
+  // cliente por defecto aquí sería confuso (pareces cliente sin serlo).
+  return <PerfilNoEncontrado />
+}
+
+function PerfilNoEncontrado() {
+  return (
+    <div className="mx-auto max-w-lg px-4 py-10 text-center">
+      <p className="mb-2 text-lg font-semibold">No encontramos tu perfil</p>
+      <p className="text-neutral-500">
+        Si acabas de registrarte y confirmar tu correo, intenta cerrar sesión y volver a entrar. Si el problema
+        sigue, contáctanos.
+      </p>
+    </div>
+  )
 }
 
 function App() {

@@ -1,9 +1,12 @@
-// Guarda los datos del formulario de registro cuando Supabase exige confirmar el
-// correo antes de abrir sesión. Se completan perfiles/trabajadores en el primer
-// login, una vez que sí hay una sesión activa (auth.uid() disponible para RLS).
-// Nota: los archivos (foto, CV, antecedentes, documentos migratorios) no se
-// pueden guardar aquí (localStorage no admite File) y se pierden en este
-// camino; la persona deberá volver a subirlos desde su panel más adelante.
+// Forma de los datos del formulario de registro que todavía no tienen fila
+// en perfiles/trabajadores. Cuando Supabase exige confirmar el correo antes
+// de abrir sesión, estos datos viajan en user_metadata (supabase.auth.signUp
+// con `options: { data }`) en vez de localStorage: así sobreviven aunque el
+// enlace de confirmación se abra en otro navegador o dispositivo del que se
+// registró. AuthContext.cargarPerfil los usa para completar el alta en el
+// primer login. Nota: los archivos (foto, CV, antecedentes, documentos
+// migratorios) no viajan aquí (user_metadata no admite File) y se pierden en
+// este camino; la persona deberá volver a subirlos desde su panel.
 import type { Rol, Genero, Nacionalidad, TipoDocumento, EstadoMigratorio } from '../types'
 
 export interface RegistroPendiente {
@@ -32,17 +35,13 @@ export interface RegistroPendiente {
   referencia2_celular?: string
 }
 
+// Respaldo temporal: registros que quedaron pendientes con una versión
+// anterior (antes de mover esto a user_metadata) guardaron sus datos aquí.
+// Sin este fallback, esas cuentas quedarían varadas para siempre. Se puede
+// quitar una vez que ya no queden registros pendientes de esa época.
 const CLAVE = 'limpi_registro_pendiente'
 
-export function guardarPendiente(datos: RegistroPendiente) {
-  try {
-    localStorage.setItem(CLAVE, JSON.stringify(datos))
-  } catch {
-    // localStorage puede no estar disponible (modo privado); no es crítico.
-  }
-}
-
-export function leerPendiente(email: string): RegistroPendiente | null {
+export function leerPendienteLegado(email: string): RegistroPendiente | null {
   try {
     const crudo = localStorage.getItem(CLAVE)
     if (!crudo) return null
@@ -53,7 +52,7 @@ export function leerPendiente(email: string): RegistroPendiente | null {
   }
 }
 
-export function limpiarPendiente() {
+export function limpiarPendienteLegado() {
   try {
     localStorage.removeItem(CLAVE)
   } catch {

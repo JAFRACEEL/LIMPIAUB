@@ -18,7 +18,7 @@ import {
   sonZonasValidas,
   esFechaFuturaValida,
 } from '../lib/validadores'
-import { guardarPendiente } from '../lib/registroPendiente'
+import type { RegistroPendiente } from '../lib/registroPendiente'
 import type { Rol, Nacionalidad, Genero, TipoDocumento, EstadoMigratorio } from '../types'
 
 async function subirArchivo(
@@ -162,7 +162,47 @@ export function Registro() {
     setError(null)
     setEnviando(true)
 
-    const { data, error: errorSignUp } = await supabase.auth.signUp({ email, password })
+    const estadoMigratorio: EstadoMigratorio =
+      rol === 'trabajador' && nacionalidad === 'extranjera' ? 'pendiente_validacion' : 'no_aplica'
+
+    // Vive en el propio usuario de Supabase (no en localStorage): así, si
+    // Supabase exige confirmar el correo, da igual desde qué navegador o
+    // dispositivo se confirme y se vuelva a iniciar sesión — AuthContext
+    // puede completar el alta igual (ver cargarPerfil). Los archivos (foto,
+    // CV, antecedentes, documentos migratorios) no viajan aquí: se deberán
+    // adjuntar desde el panel una vez confirmada la cuenta.
+    const datosRegistro: RegistroPendiente = {
+      email,
+      rol,
+      nombre,
+      telefono: celular,
+      zona: rol === 'cliente' ? zona : (zonas[0] ?? ''),
+      direccion,
+      genero: rol === 'trabajador' ? (genero as Genero) : undefined,
+      nacionalidad: rol === 'trabajador' ? nacionalidad : undefined,
+      tipo_documento: rol === 'trabajador' ? (tipoDocumento as TipoDocumento) : undefined,
+      numero_documento: rol === 'trabajador' ? numeroDocumento : undefined,
+      zonas: rol === 'trabajador' ? zonas : undefined,
+      servicios: rol === 'trabajador' ? servicios : undefined,
+      tarifa_hora: rol === 'trabajador' ? Number(tarifaHora) : undefined,
+      experiencia: rol === 'trabajador' ? experiencia : undefined,
+      antecedentes: rol === 'trabajador' ? antecedentes : undefined,
+      cuenta_autorizacion_migratoria:
+        rol === 'trabajador' && nacionalidad === 'extranjera' ? cuentaAutorizacion === 'si' : undefined,
+      estado_migratorio: rol === 'trabajador' ? estadoMigratorio : undefined,
+      doc_migratorio_numero: cuentaAutorizacion === 'si' ? docNumero : undefined,
+      doc_migratorio_vencimiento: cuentaAutorizacion === 'si' ? docVencimiento : undefined,
+      referencia1_nombre: rol === 'trabajador' ? referencia1Nombre : undefined,
+      referencia1_celular: rol === 'trabajador' ? referencia1Celular : undefined,
+      referencia2_nombre: rol === 'trabajador' ? referencia2Nombre : undefined,
+      referencia2_celular: rol === 'trabajador' ? referencia2Celular : undefined,
+    }
+
+    const { data, error: errorSignUp } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: datosRegistro },
+    })
 
     if (errorSignUp || !data.user) {
       setError(traducirError(errorSignUp ?? new Error('No se pudo crear la cuenta.')))
@@ -170,41 +210,11 @@ export function Registro() {
       return
     }
 
-    const estadoMigratorio: EstadoMigratorio =
-      rol === 'trabajador' && nacionalidad === 'extranjera' ? 'pendiente_validacion' : 'no_aplica'
-
     // Sin sesión activa todavía significa que Supabase exige confirmar el
-    // correo antes de dejar entrar. Guardamos los datos y los completamos en
-    // el primer login (ver AuthContext.cargarPerfil). Los archivos (foto, CV,
-    // antecedentes, documentos migratorios) no sobreviven este camino: se
-    // deberán volver a adjuntar desde el panel una vez confirmada la cuenta.
+    // correo antes de dejar entrar. AuthContext.cargarPerfil completa el
+    // alta con los datos de arriba en el primer login, desde cualquier
+    // navegador (quedaron guardados en el propio usuario, no aquí).
     if (!data.session) {
-      guardarPendiente({
-        email,
-        rol,
-        nombre,
-        telefono: celular,
-        zona: rol === 'cliente' ? zona : (zonas[0] ?? ''),
-        direccion,
-        genero: rol === 'trabajador' ? (genero as Genero) : undefined,
-        nacionalidad: rol === 'trabajador' ? nacionalidad : undefined,
-        tipo_documento: rol === 'trabajador' ? (tipoDocumento as TipoDocumento) : undefined,
-        numero_documento: rol === 'trabajador' ? numeroDocumento : undefined,
-        zonas: rol === 'trabajador' ? zonas : undefined,
-        servicios: rol === 'trabajador' ? servicios : undefined,
-        tarifa_hora: rol === 'trabajador' ? Number(tarifaHora) : undefined,
-        experiencia: rol === 'trabajador' ? experiencia : undefined,
-        antecedentes: rol === 'trabajador' ? antecedentes : undefined,
-        cuenta_autorizacion_migratoria:
-          rol === 'trabajador' && nacionalidad === 'extranjera' ? cuentaAutorizacion === 'si' : undefined,
-        estado_migratorio: rol === 'trabajador' ? estadoMigratorio : undefined,
-        doc_migratorio_numero: cuentaAutorizacion === 'si' ? docNumero : undefined,
-        doc_migratorio_vencimiento: cuentaAutorizacion === 'si' ? docVencimiento : undefined,
-        referencia1_nombre: rol === 'trabajador' ? referencia1Nombre : undefined,
-        referencia1_celular: rol === 'trabajador' ? referencia1Celular : undefined,
-        referencia2_nombre: rol === 'trabajador' ? referencia2Nombre : undefined,
-        referencia2_celular: rol === 'trabajador' ? referencia2Celular : undefined,
-      })
       setEnviando(false)
       setError(null)
       alert('Te enviamos un correo de confirmación. Confírmalo y vuelve a iniciar sesión para terminar tu registro.')
@@ -220,7 +230,13 @@ export function Registro() {
       if (ruta) fotoUrl = supabase.storage.from('fotos').getPublicUrl(ruta).data.publicUrl
     }
 
-    const { error: errorPerfil } = await supabase.from('perfiles').insert({
+    // upsert, no insert: si Supabase no exige confirmar correo, el listener
+    // de AuthContext (onAuthStateChange) puede dispararse casi al mismo
+    // tiempo que este signUp y crear el perfil primero desde user_metadata.
+    // Con insert, esa carrera nos tiraría un error de clave duplicada aquí y
+    // se perdería la foto/CV/documentos; con upsert, sea quien sea que llegó
+    // primero, esto termina de escribir los datos completos igual.
+    const { error: errorPerfil } = await supabase.from('perfiles').upsert({
       id: userId,
       rol,
       nombre,
@@ -245,7 +261,7 @@ export function Registro() {
         docConstancia ? subirArchivo('documentos', userId, docConstancia, 'doc-constancia') : Promise.resolve(null),
       ])
 
-      const { error: errorTrabajador } = await supabase.from('trabajadores').insert({
+      const { error: errorTrabajador } = await supabase.from('trabajadores').upsert({
         id: userId,
         genero,
         nacionalidad,

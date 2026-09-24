@@ -18,9 +18,12 @@ export function RutaProtegida({
 
   if (!session) return <Navigate to="/login" replace />
 
-  if (rolRequerido && perfil && perfil.rol !== rolRequerido) {
-    const destino = perfil.rol === 'trabajador' ? '/panel' : perfil.rol === 'admin' ? '/admin' : '/buscar'
-    return <Navigate to={destino} replace />
+  if (rolRequerido) {
+    if (!perfil) return <Navigate to="/" replace />
+    if (perfil.rol !== rolRequerido) {
+      const destino = perfil.rol === 'trabajador' ? '/panel' : perfil.rol === 'admin' ? '/admin' : '/buscar'
+      return <Navigate to={destino} replace />
+    }
   }
 
   return <>{children}</>

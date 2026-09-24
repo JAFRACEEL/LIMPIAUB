@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Perfil } from '../types'
-import { leerPendiente, limpiarPendiente } from '../lib/registroPendiente'
+import { leerPendienteLegado, limpiarPendienteLegado, type RegistroPendiente } from '../lib/registroPendiente'
 
 interface AuthState {
   cargando: boolean
@@ -27,10 +27,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // No hay fila en `perfiles` todavía: puede ser un registro que quedó
-    // pendiente de confirmar el correo. Si tenemos los datos guardados,
-    // completamos el alta ahora que sí existe una sesión autenticada.
-    const pendiente = user.email ? leerPendiente(user.email) : null
-    if (!pendiente) {
+    // pendiente de confirmar el correo. Los datos del formulario viajan en
+    // user_metadata (ver Registro.tsx), no en localStorage, así que están
+    // disponibles sin importar desde qué navegador/dispositivo se confirmó
+    // el correo y se volvió a iniciar sesión. Si no hay nada en metadata,
+    // puede ser un registro de antes de este cambio: buscamos el respaldo
+    // viejo en localStorage (solo funciona si es el mismo navegador donde se
+    // llenó el formulario).
+    let pendiente = user.user_metadata as Partial<RegistroPendiente>
+    let usandoRespaldoLegado = false
+    if (!pendiente?.rol && user.email) {
+      const legado = leerPendienteLegado(user.email)
+      if (legado) {
+        pendiente = legado
+        usandoRespaldoLegado = true
+      }
+    }
+    if (!pendiente?.rol) {
       setPerfil(null)
       return
     }
@@ -38,10 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Datos guardados por una versión anterior del formulario (antes de
     // documento/zonas múltiples): les faltan campos que ahora son
     // obligatorios y nunca se van a poder completar solos. No hay nada que
-    // reintentar en logins futuros; limpiamos y pedimos registrarse de nuevo
-    // (la cuenta de Auth ya existe, así que no vuelve a intentar crearla).
+    // reintentar en logins futuros; pedimos registrarse de nuevo (la cuenta
+    // de Auth ya existe, así que no vuelve a intentar crearla).
     if (pendiente.rol === 'trabajador' && (!pendiente.numero_documento || !pendiente.zonas?.length)) {
-      limpiarPendiente()
       setPerfil(null)
       alert('No pudimos completar tu registro anterior. Por favor vuelve a registrarte como trabajadora.')
       return
@@ -90,9 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // Solo borramos los datos guardados si todo se creó bien; si algo falló
-    // los dejamos para no perder la información de la persona.
-    if (!errorPerfil && !errorTrabajador) limpiarPendiente()
+    if (!errorPerfil && !errorTrabajador && usandoRespaldoLegado) limpiarPendienteLegado()
 
     const { data: creado } = await supabase
       .from('perfiles')
