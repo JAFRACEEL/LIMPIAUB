@@ -15,6 +15,9 @@ export function MisReservas() {
   const [calificadas, setCalificadas] = useState<Set<string>>(new Set())
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editandoDireccion, setEditandoDireccion] = useState<string | null>(null)
+  const [nuevaDireccion, setNuevaDireccion] = useState('')
+  const [guardandoDireccion, setGuardandoDireccion] = useState(false)
   const { toasts, agregar } = useToasts()
 
   const cargar = useCallback(async () => {
@@ -81,6 +84,34 @@ export function MisReservas() {
     cargar()
   }
 
+  function empezarEdicionDireccion(r: Reserva) {
+    setEditandoDireccion(r.id)
+    setNuevaDireccion(r.direccion)
+  }
+
+  async function guardarDireccion(id: string) {
+    if (!nuevaDireccion.trim()) return
+    setGuardandoDireccion(true)
+    // Si justo se completó o canceló antes de este clic, no queremos
+    // cambiarle la dirección a un servicio que ya terminó.
+    const { data, error: errorUpdate } = await supabase
+      .from('reservas')
+      .update({ direccion: nuevaDireccion.trim() })
+      .eq('id', id)
+      .in('estado', ['solicitada', 'aceptada', 'en_curso'])
+      .select('id')
+    setGuardandoDireccion(false)
+    if (errorUpdate) {
+      alert(traducirError(errorUpdate))
+      return
+    }
+    if (!data || data.length === 0) {
+      agregar('Esta reserva ya había cambiado y no se puede editar la dirección.')
+    }
+    setEditandoDireccion(null)
+    cargar()
+  }
+
   if (cargando) return <div className="p-6 text-center text-neutral-500">Cargando tus reservas…</div>
 
   return (
@@ -122,6 +153,45 @@ export function MisReservas() {
                   · {r.hora.slice(0, 5)} · {r.horas}h
                 </p>
                 <p className="text-sm text-neutral-500">{r.zona}</p>
+
+                {editandoDireccion === r.id ? (
+                  <div className="mt-1 flex flex-col gap-2">
+                    <input
+                      value={nuevaDireccion}
+                      onChange={(e) => setNuevaDireccion(e.target.value)}
+                      className="input"
+                      placeholder="Jirón / calle, número, referencia"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        disabled={guardandoDireccion}
+                        onClick={() => guardarDireccion(r.id)}
+                        className="flex-1 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                      >
+                        Guardar dirección
+                      </button>
+                      <button
+                        onClick={() => setEditandoDireccion(null)}
+                        className="flex-1 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-700"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className="min-w-0 truncate text-sm text-neutral-700">{r.direccion}</p>
+                    {(r.estado === 'solicitada' || r.estado === 'aceptada' || r.estado === 'en_curso') && (
+                      <button
+                        onClick={() => empezarEdicionDireccion(r)}
+                        className="shrink-0 text-xs font-semibold text-teal-700"
+                      >
+                        Cambiar dirección
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {r.total != null && (
                   <p className="mt-1 text-sm font-semibold text-teal-700">Total: S/ {r.total.toFixed(2)}</p>
                 )}
@@ -151,6 +221,25 @@ export function MisReservas() {
                       </a>
                     )}
                   </div>
+                )}
+
+                {contacto && (r.estado === 'aceptada' || r.estado === 'en_curso') && (
+                  <a
+                    href={whatsappUrl(
+                      contacto.telefono,
+                      `Hola ${contacto.nombre}, aquí te comparto mi ubicación en vivo para que me encuentres más fácil 📍`,
+                    )}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 block rounded-lg border border-green-600 px-3 py-2 text-center text-xs font-semibold text-green-700"
+                  >
+                    📍 Enviar mi ubicación en vivo por WhatsApp
+                  </a>
+                )}
+                {contacto && (r.estado === 'aceptada' || r.estado === 'en_curso') && (
+                  <p className="mt-1 text-center text-[11px] text-neutral-400">
+                    En WhatsApp, toca el clip 📎 → Ubicación → Compartir ubicación en tiempo real
+                  </p>
                 )}
 
                 {r.estado === 'solicitada' && r.modo === 'abierto' && !r.trabajador_id && (
