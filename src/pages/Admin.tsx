@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
 import {
@@ -20,6 +20,27 @@ interface PerfilResumen {
 
 type TrabajadorAdmin = Trabajador & { perfiles: PerfilResumen }
 
+interface ClienteAdmin {
+  id: string
+  nombre: string
+  telefono: string
+  zona: string
+  direccion: string | null
+  creado_en: string
+}
+
+interface ReservaAdmin {
+  id: string
+  servicio: string
+  fecha: string
+  hora: string
+  estado: string
+  total: number | null
+  zona: string
+  perfiles: { nombre: string } | null
+  trabajadores: { perfiles: { nombre: string } } | null
+}
+
 interface Metricas {
   clientes: number
   verificados: number
@@ -37,6 +58,49 @@ export function Admin() {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [procesando, setProcesando] = useState<string | null>(null)
+
+  const [clientes, setClientes] = useState<ClienteAdmin[] | null>(null)
+  const [trabajadorasTodas, setTrabajadorasTodas] = useState<TrabajadorAdmin[] | null>(null)
+  const [reservasRecientes, setReservasRecientes] = useState<ReservaAdmin[] | null>(null)
+  const [cargandoDetalle, setCargandoDetalle] = useState<string | null>(null)
+
+  async function cargarClientes() {
+    if (clientes) return
+    setCargandoDetalle('clientes')
+    const { data, error } = await supabase
+      .from('perfiles')
+      .select('id, nombre, telefono, zona, direccion, creado_en')
+      .eq('rol', 'cliente')
+      .order('creado_en', { ascending: false })
+    if (error) alert(traducirError(error))
+    else setClientes((data as ClienteAdmin[]) ?? [])
+    setCargandoDetalle(null)
+  }
+
+  async function cargarTrabajadorasTodas(forzar = false) {
+    if (trabajadorasTodas && !forzar) return
+    setCargandoDetalle('trabajadoras')
+    const { data, error } = await supabase
+      .from('trabajadores')
+      .select('*, perfiles!inner(nombre, telefono, direccion, foto_url)')
+      .order('rating_avg', { ascending: false })
+    if (error) alert(traducirError(error))
+    else setTrabajadorasTodas((data as TrabajadorAdmin[]) ?? [])
+    setCargandoDetalle(null)
+  }
+
+  async function cargarReservasRecientes() {
+    if (reservasRecientes) return
+    setCargandoDetalle('reservas')
+    const { data, error } = await supabase
+      .from('reservas')
+      .select('id, servicio, fecha, hora, estado, total, zona, perfiles(nombre), trabajadores(perfiles(nombre))')
+      .order('creado_en', { ascending: false })
+      .limit(50)
+    if (error) alert(traducirError(error))
+    else setReservasRecientes((data as unknown as ReservaAdmin[]) ?? [])
+    setCargandoDetalle(null)
+  }
 
   async function cargar() {
     setCargando(true)
@@ -119,6 +183,7 @@ export function Admin() {
     if (error) alert(traducirError(error))
     setProcesando(null)
     cargar()
+    if (trabajadorasTodas) cargarTrabajadorasTodas(true)
   }
 
   async function rechazarVerificacion(id: string) {
@@ -131,6 +196,7 @@ export function Admin() {
     if (error) alert(traducirError(error))
     setProcesando(null)
     cargar()
+    if (trabajadorasTodas) cargarTrabajadorasTodas(true)
   }
 
   async function validarMigratorio(id: string) {
@@ -139,6 +205,7 @@ export function Admin() {
     if (error) alert(traducirError(error))
     setProcesando(null)
     cargar()
+    if (trabajadorasTodas) cargarTrabajadorasTodas(true)
   }
 
   async function rechazarMigratorio(id: string) {
@@ -147,6 +214,7 @@ export function Admin() {
     if (error) alert(traducirError(error))
     setProcesando(null)
     cargar()
+    if (trabajadorasTodas) cargarTrabajadorasTodas(true)
   }
 
   if (cargando) return <div className="p-6 text-center text-neutral-500">Cargando panel de admin…</div>
@@ -290,7 +358,154 @@ export function Admin() {
         </ul>
       )}
 
+      <h2 className="mb-3 mt-8 text-lg font-semibold">Ver todo el detalle</h2>
+      <p className="mb-4 text-sm text-neutral-500">
+        Los números de arriba son un resumen; aquí puedes revisar quién hay detrás de cada uno.
+      </p>
+
+      <SeccionDetalle
+        titulo="Todos los clientes"
+        cantidad={metricas?.clientes}
+        cargando={cargandoDetalle === 'clientes'}
+        onAbrir={cargarClientes}
+      >
+        {clientes && clientes.length === 0 ? (
+          <p className="text-sm text-neutral-500">Todavía no hay clientes registrados.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {clientes?.map((c) => (
+              <li key={c.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
+                <p className="font-medium">{c.nombre}</p>
+                <p className="text-neutral-500">
+                  {c.telefono} · {c.zona}
+                </p>
+                {c.direccion && <p className="text-neutral-500">{c.direccion}</p>}
+                <p className="text-xs text-neutral-400">
+                  Registrado: {new Date(c.creado_en).toLocaleDateString('es-PE')}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SeccionDetalle>
+
+      <SeccionDetalle
+        titulo="Todas las trabajadoras"
+        cargando={cargandoDetalle === 'trabajadoras'}
+        onAbrir={cargarTrabajadorasTodas}
+      >
+        {trabajadorasTodas && trabajadorasTodas.length === 0 ? (
+          <p className="text-sm text-neutral-500">Todavía no hay trabajadoras registradas.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {trabajadorasTodas?.map((t) => (
+              <li key={t.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{t.perfiles.nombre}</p>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      t.habilitado_trabajar
+                        ? 'bg-green-100 text-green-700'
+                        : t.verificacion_rechazada || t.estado_migratorio === 'rechazado'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {t.habilitado_trabajar
+                      ? 'Habilitada'
+                      : t.verificacion_rechazada
+                        ? 'Rechazada'
+                        : t.estado_migratorio === 'rechazado'
+                          ? 'Migratorio rechazado'
+                          : 'Pendiente'}
+                  </span>
+                </div>
+                <p className="text-neutral-500">
+                  {t.perfiles.telefono} · {t.zonas.join(', ')}
+                </p>
+                <p className="text-neutral-500">
+                  S/ {t.tarifa_hora.toFixed(2)}/h · {t.trabajos_completados} trabajos ·{' '}
+                  {t.rating_n > 0 ? `${t.rating_avg.toFixed(1)} ★` : 'sin calificar'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </SeccionDetalle>
+
+      <SeccionDetalle
+        titulo="Reservas recientes"
+        cargando={cargandoDetalle === 'reservas'}
+        onAbrir={cargarReservasRecientes}
+      >
+        {reservasRecientes && reservasRecientes.length === 0 ? (
+          <p className="text-sm text-neutral-500">Todavía no hay reservas.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {reservasRecientes?.map((r) => (
+              <li key={r.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{r.servicio}</p>
+                  <span className="shrink-0 rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">
+                    {r.estado}
+                  </span>
+                </div>
+                <p className="text-neutral-500">
+                  {r.fecha} · {r.hora.slice(0, 5)} · {r.zona}
+                </p>
+                <p className="text-neutral-500">
+                  Cliente: {r.perfiles?.nombre ?? '—'} · Trabajadora: {r.trabajadores?.perfiles.nombre ?? '—'}
+                </p>
+                {r.total != null && <p className="font-medium text-teal-700">Total: S/ {r.total.toFixed(2)}</p>}
+              </li>
+            ))}
+          </ul>
+        )}
+      </SeccionDetalle>
+
       <KitCredito />
+    </div>
+  )
+}
+
+function SeccionDetalle({
+  titulo,
+  cantidad,
+  cargando,
+  onAbrir,
+  children,
+}: {
+  titulo: string
+  cantidad?: number
+  cargando: boolean
+  onAbrir: () => void
+  children: ReactNode
+}) {
+  const [abierto, setAbierto] = useState(false)
+
+  return (
+    <div className="mb-4 rounded-2xl border border-neutral-200 bg-white p-4">
+      <button
+        type="button"
+        onClick={() => {
+          const siguiente = !abierto
+          setAbierto(siguiente)
+          if (siguiente) onAbrir()
+        }}
+        className="flex w-full items-center justify-between text-left"
+      >
+        <span className="font-semibold">
+          {titulo}
+          {cantidad != null && <span className="ml-1 font-normal text-neutral-500">({cantidad})</span>}
+        </span>
+        <span className="text-sm text-teal-700">{abierto ? 'Ocultar ▲' : 'Ver detalle ▼'}</span>
+      </button>
+
+      {abierto && (
+        <div className="mt-3 border-t border-neutral-100 pt-3">
+          {cargando ? <p className="text-sm text-neutral-500">Cargando…</p> : children}
+        </div>
+      )}
     </div>
   )
 }
