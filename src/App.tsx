@@ -4,6 +4,8 @@ import { RutaProtegida } from './components/RutaProtegida'
 import { useAuth } from './context/AuthContext'
 import { Login } from './pages/Login'
 import { Registro } from './pages/Registro'
+import { RecuperarContrasena } from './pages/RecuperarContrasena'
+import { RestablecerContrasena } from './pages/RestablecerContrasena'
 import { Buscar } from './pages/Buscar'
 import { Panel } from './pages/Panel'
 import { Admin } from './pages/Admin'
@@ -43,6 +45,8 @@ function App() {
         <Route path="/" element={<Inicio />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+        <Route path="/recuperar" element={<RecuperarContrasena />} />
+        <Route path="/restablecer" element={<RestablecerContrasena />} />
         <Route
           path="/buscar"
           element={

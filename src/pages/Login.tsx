@@ -55,6 +55,10 @@ export function Login() {
           />
         </label>
 
+        <Link to="/recuperar" className="-mt-2 text-right text-sm font-medium text-teal-700">
+          ¿Olvidaste tu contraseña?
+        </Link>
+
         {error && (
           <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
         )}
