@@ -67,7 +67,14 @@ export interface TrabajadorPublico {
   descripcion: string | null
 }
 
-export type EstadoReserva = 'solicitada' | 'aceptada' | 'en_curso' | 'completada' | 'cancelada' | 'rechazada'
+export type EstadoReserva =
+  | 'solicitada'
+  | 'aceptada'
+  | 'en_camino'
+  | 'en_curso'
+  | 'completada'
+  | 'cancelada'
+  | 'rechazada'
 export type ModoReserva = 'abierto' | 'directo'
 export type MetodoPago = 'yape' | 'plin' | 'efectivo'
 
@@ -91,8 +98,14 @@ export interface Reserva {
   estado: EstadoReserva
   pago_metodo: MetodoPago | null
   pago_confirmado: boolean
+  en_camino_en: string | null
+  hora_llegada: string | null
   inicio_real: string | null
+  fin_estimado: string | null
   fin_real: string | null
+  ubicacion_lat: number | null
+  ubicacion_lng: number | null
+  ubicacion_actualizada_en: string | null
   creado_en: string
   modo: ModoReserva
   elegir_por_mi: boolean

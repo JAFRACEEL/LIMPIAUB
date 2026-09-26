@@ -23,9 +23,11 @@ export function seSolapan(
   fecha2: string,
   hora2: string,
   horas2: number,
+  margenTrasladoMinutos = 0,
 ): boolean {
-  const inicio1 = new Date(`${fecha1}T${hora1}`).getTime()
-  const fin1 = inicio1 + horas1 * 3600_000
+  const margenMs = margenTrasladoMinutos * 60_000
+  const inicio1 = new Date(`${fecha1}T${hora1}`).getTime() - margenMs
+  const fin1 = new Date(`${fecha1}T${hora1}`).getTime() + horas1 * 3600_000 + margenMs
   const inicio2 = new Date(`${fecha2}T${hora2}`).getTime()
   const fin2 = inicio2 + horas2 * 3600_000
   return inicio1 < fin2 && inicio2 < fin1

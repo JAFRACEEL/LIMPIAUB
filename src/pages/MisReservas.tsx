@@ -209,7 +209,7 @@ export function MisReservas() {
                       <p className="truncate text-sm font-medium">{contacto.nombre}</p>
                       <Estrellas promedio={contacto.rating_avg} cantidad={1} />
                     </div>
-                    {(r.estado === 'aceptada' || r.estado === 'en_curso' || r.estado === 'completada') && (
+                    {['aceptada', 'en_camino', 'en_curso', 'completada'].includes(r.estado) && (
                       <a
                         href={whatsappUrl(
                           contacto.telefono,
@@ -225,7 +225,43 @@ export function MisReservas() {
                   </div>
                 )}
 
-                {contacto && (r.estado === 'aceptada' || r.estado === 'en_curso') && (
+                {contacto && r.estado === 'en_camino' && (
+                  <div className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
+                    <p className="font-medium">🚗 {contacto.nombre.split(' ')[0]} va en camino</p>
+                    {r.hora_llegada && (
+                      <p className="text-xs text-teal-700">
+                        Llegó a las{' '}
+                        {new Date(r.hora_llegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                    {r.ubicacion_actualizada_en && (
+                      <p className="text-xs text-teal-700">
+                        Ubicación actualizada hace{' '}
+                        {Math.max(0, Math.round((Date.now() - new Date(r.ubicacion_actualizada_en).getTime()) / 60000))}{' '}
+                        min
+                      </p>
+                    )}
+                    {r.ubicacion_lat != null && r.ubicacion_lng != null && (
+                      <a
+                        href={`https://www.google.com/maps?q=${r.ubicacion_lat},${r.ubicacion_lng}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 inline-block text-xs font-semibold underline"
+                      >
+                        Ver ubicación en el mapa
+                      </a>
+                    )}
+                  </div>
+                )}
+
+                {r.estado === 'en_curso' && r.fin_estimado && (
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Fin estimado:{' '}
+                    {new Date(r.fin_estimado).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+
+                {contacto && (r.estado === 'aceptada' || r.estado === 'en_camino') && (
                   <a
                     href={whatsappUrl(
                       contacto.telefono,
@@ -238,7 +274,7 @@ export function MisReservas() {
                     📍 Enviar mi ubicación en vivo por WhatsApp
                   </a>
                 )}
-                {contacto && (r.estado === 'aceptada' || r.estado === 'en_curso') && (
+                {contacto && (r.estado === 'aceptada' || r.estado === 'en_camino') && (
                   <p className="mt-1 text-center text-[11px] text-neutral-400">
                     En WhatsApp, toca el clip 📎 → Ubicación → Compartir ubicación en tiempo real
                   </p>

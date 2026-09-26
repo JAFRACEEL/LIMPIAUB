@@ -43,6 +43,28 @@ interface ReservaAdmin {
   trabajadores: { perfiles: { nombre: string } } | null
 }
 
+interface ReservaTablero {
+  id: string
+  servicio: string
+  zona: string
+  direccion: string
+  fecha: string
+  hora: string
+  horas: number
+  estado: string
+  hora_llegada: string | null
+  inicio_real: string | null
+  fin_estimado: string | null
+  fin_real: string | null
+  perfiles: { nombre: string } | null
+  trabajadores: { perfiles: { nombre: string } } | null
+}
+
+// Además de "tiempo excedido" (ya pasó fin_estimado), un exceso mayor a
+// este margen genera la alerta administrativa que pide el punto 9: no
+// interrumpe a la trabajadora, solo lo resalta acá para que el admin revise.
+const MARGEN_ALERTA_ADMIN_MINUTOS = 45
+
 interface Metricas {
   clientes: number
   verificados: number
@@ -52,7 +74,7 @@ interface Metricas {
   ingresoComision: number
 }
 
-const ESTADOS_RESERVA = ['solicitada', 'aceptada', 'en_curso', 'completada', 'cancelada', 'rechazada']
+const ESTADOS_RESERVA = ['solicitada', 'aceptada', 'en_camino', 'en_curso', 'completada', 'cancelada', 'rechazada']
 
 export function Admin() {
   const [pendientes, setPendientes] = useState<TrabajadorAdmin[]>([])
@@ -65,6 +87,7 @@ export function Admin() {
   const [trabajadorasTodas, setTrabajadorasTodas] = useState<TrabajadorAdmin[] | null>(null)
   const [reservasRecientes, setReservasRecientes] = useState<ReservaAdmin[] | null>(null)
   const [cargandoDetalle, setCargandoDetalle] = useState<string | null>(null)
+  const [tablero, setTablero] = useState<ReservaTablero[]>([])
 
   async function cargarClientes() {
     if (clientes) return
@@ -106,6 +129,18 @@ export function Admin() {
     setCargandoDetalle(null)
   }
 
+  async function cargarTablero() {
+    const { data, error } = await supabase
+      .from('reservas')
+      .select(
+        'id, servicio, zona, direccion, fecha, hora, horas, estado, hora_llegada, inicio_real, fin_estimado, fin_real, perfiles(nombre), trabajadores(perfiles(nombre))',
+      )
+      .in('estado', ['aceptada', 'en_camino', 'en_curso'])
+      .order('fecha', { ascending: true })
+      .order('hora', { ascending: true })
+    if (!error) setTablero((data as unknown as ReservaTablero[]) ?? [])
+  }
+
   async function cargar() {
     setCargando(true)
     setError(null)
@@ -142,7 +177,7 @@ export function Admin() {
       // Solo cuenta lo que sí tuvo una respuesta de alguna trabajadora
       // (cancelada no es un rechazo ni una aceptación: la clienta se echó
       // para atrás antes de eso).
-      if (['aceptada', 'en_curso', 'completada', 'rechazada'].includes(r.estado)) {
+      if (['aceptada', 'en_camino', 'en_curso', 'completada', 'rechazada'].includes(r.estado)) {
         decididas += 1
         if (r.estado === 'rechazada') rechazadas += 1
       }
@@ -166,6 +201,12 @@ export function Admin() {
 
   useEffect(() => {
     cargar()
+  }, [])
+
+  useEffect(() => {
+    cargarTablero()
+    const id = window.setInterval(cargarTablero, 30000)
+    return () => window.clearInterval(id)
   }, [])
 
   async function verDocumento(ruta: string | null) {
@@ -245,6 +286,8 @@ export function Admin() {
           ))}
         </div>
       )}
+
+      <TableroEnVivo tablero={tablero} />
 
       <h2 className="mb-3 text-lg font-semibold">Pendientes de revisión</h2>
 
@@ -472,6 +515,101 @@ export function Admin() {
       <KitCredito />
     </div>
   )
+}
+
+function TableroEnVivo({ tablero }: { tablero: ReservaTablero[] }) {
+  const enCamino = tablero.filter((r) => r.estado === 'en_camino')
+  const enServicio = tablero.filter((r) => r.estado === 'en_curso')
+  const proximos = tablero.filter((r) => r.estado === 'aceptada')
+
+  const ahora = Date.now()
+  const excedidos = enServicio.filter((r) => r.fin_estimado && new Date(r.fin_estimado).getTime() < ahora)
+  const alertaAdmin = excedidos.filter(
+    (r) => ahora - new Date(r.fin_estimado as string).getTime() > MARGEN_ALERTA_ADMIN_MINUTOS * 60_000,
+  )
+
+  return (
+    <div className="mb-8">
+      <h2 className="mb-3 text-lg font-semibold">Tablero en vivo</h2>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Metrica etiqueta="En camino" valor={enCamino.length} />
+        <Metrica etiqueta="En servicio" valor={enServicio.length} />
+        <Metrica etiqueta="Tiempo excedido" valor={excedidos.length} />
+        <Metrica etiqueta="Próximos" valor={proximos.length} />
+      </div>
+
+      {alertaAdmin.length > 0 && (
+        <div className="mb-4 rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <p className="font-medium">
+            {alertaAdmin.length === 1
+              ? 'Un servicio superó por más de 45 min su tiempo estimado. Revisa si hay algún inconveniente.'
+              : `${alertaAdmin.length} servicios superaron por más de 45 min su tiempo estimado. Revisa si hay algún inconveniente.`}
+          </p>
+        </div>
+      )}
+
+      {tablero.length === 0 ? (
+        <p className="rounded-xl bg-neutral-100 px-4 py-6 text-center text-sm text-neutral-500">
+          No hay servicios en camino, en curso o próximos ahora mismo.
+        </p>
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {tablero.map((r) => {
+            const excedido = r.estado === 'en_curso' && r.fin_estimado && new Date(r.fin_estimado).getTime() < ahora
+            return (
+              <li key={r.id} className="rounded-lg border border-neutral-200 p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium">{r.servicio}</p>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                      excedido ? 'bg-red-100 text-red-700' : 'bg-neutral-100 text-neutral-600'
+                    }`}
+                  >
+                    {excedido ? 'En servicio · tiempo excedido' : ESTADO_TABLERO_LABELS[r.estado] ?? r.estado}
+                  </span>
+                </div>
+                <p className="text-neutral-500">
+                  Cliente: {r.perfiles?.nombre ?? '—'} · Trabajadora: {r.trabajadores?.perfiles.nombre ?? '—'}
+                </p>
+                <p className="text-neutral-500">
+                  {r.direccion} · {r.zona}
+                </p>
+                <p className="text-neutral-500">
+                  Programada: {r.fecha} {r.hora.slice(0, 5)} · {r.horas}h
+                </p>
+                {r.hora_llegada && (
+                  <p className="text-neutral-500">
+                    Llegó: {new Date(r.hora_llegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                {r.inicio_real && (
+                  <p className="text-neutral-500">
+                    Inicio real: {new Date(r.inicio_real).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                {r.fin_estimado && (
+                  <p className="text-neutral-500">
+                    Fin estimado: {new Date(r.fin_estimado).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                {r.fin_real && (
+                  <p className="text-neutral-500">
+                    Fin real: {new Date(r.fin_real).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+const ESTADO_TABLERO_LABELS: Record<string, string> = {
+  aceptada: 'Próximo',
+  en_camino: 'En camino',
+  en_curso: 'En servicio',
 }
 
 function SeccionDetalle({

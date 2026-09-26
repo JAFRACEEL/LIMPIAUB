@@ -41,6 +41,8 @@ export function Reservar() {
 
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [disponibleDirecto, setDisponibleDirecto] = useState<boolean | null>(null)
+  const [verificandoDisponibilidad, setVerificandoDisponibilidad] = useState(false)
 
   useEffect(() => {
     if (!trabajadorId) {
@@ -67,6 +69,31 @@ export function Reservar() {
     }
   }, [trabajadorId])
 
+  useEffect(() => {
+    if (!trabajadorDirecto || !fecha || !hora || !horas) {
+      setDisponibleDirecto(null)
+      return
+    }
+    let activo = true
+    setVerificandoDisponibilidad(true)
+    const numHoras = Number(horas)
+    supabase
+      .rpc('trabajador_disponible_en', {
+        p_trabajador_id: trabajadorDirecto.id,
+        p_fecha: fecha,
+        p_hora: hora,
+        p_horas: Number.isFinite(numHoras) ? numHoras : 2,
+      })
+      .then(({ data, error: errorRpc }) => {
+        if (!activo) return
+        setDisponibleDirecto(errorRpc ? null : Boolean(data))
+        setVerificandoDisponibilidad(false)
+      })
+    return () => {
+      activo = false
+    }
+  }, [trabajadorDirecto, fecha, hora, horas])
+
   const puedeTraerKit = trabajadorDirecto ? trabajadorDirecto.kit_propio : true
 
   const conMateriales = seccionServicio === 'limpieza' && materiales === 'no' && opcionSinMateriales === 'trae_kit'
@@ -79,6 +106,9 @@ export function Reservar() {
     if (!perfil) return 'No pudimos identificar tu cuenta. Vuelve a iniciar sesión e intenta de nuevo.'
     if (trabajadorId && !trabajadorDirecto) {
       return 'No pudimos cargar a la trabajadora elegida. Recarga la página antes de reservar.'
+    }
+    if (trabajadorDirecto && disponibleDirecto === false) {
+      return 'Esta trabajadora no está disponible en el horario elegido. Cambia el horario o envíalo como pedido abierto.'
     }
     if (!servicio) return 'Elige el servicio que necesitas.'
     if (requiereDescripcionTrabajo && !descripcionTrabajo.trim()) {
@@ -271,6 +301,28 @@ export function Reservar() {
             className="input"
           />
         </Campo>
+
+        {trabajadorDirecto && verificandoDisponibilidad && (
+          <p className="text-xs text-neutral-500">Verificando disponibilidad de la trabajadora…</p>
+        )}
+        {trabajadorDirecto && disponibleDirecto === false && (
+          <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="font-medium">
+              Este profesional no se encuentra disponible en el horario seleccionado.
+            </p>
+            <p className="mt-1">Elige otra fecha u hora, o envía el pedido abierto a otras trabajadoras disponibles.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setTrabajadorDirecto(null)
+                setDisponibleDirecto(null)
+              }}
+              className="mt-2 rounded-lg bg-amber-900 px-3 py-1.5 text-xs font-semibold text-white"
+            >
+              Enviar como pedido abierto a otras trabajadoras
+            </button>
+          </div>
+        )}
 
         <Campo etiqueta="Dirección">
           <input

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
 import { useToasts } from '../lib/useToasts'
-import { inicioSemanaLima, inicioMesLima, whatsappUrl } from '../lib/constantes'
+import { inicioSemanaLima, inicioMesLima, whatsappUrl, MARGEN_TRASLADO_MINUTOS } from '../lib/constantes'
 import { calcularComision, seSolapan } from '../lib/calculos'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
 import { EditarPerfilTrabajador } from '../components/EditarPerfilTrabajador'
@@ -325,6 +325,17 @@ export function Panel() {
     setProcesando(null)
   }
 
+  // Best-effort: si falla (sin permiso de ubicación, sin señal, la reserva
+  // ya avanzó de estado) simplemente no se actualiza el punto; no vale la
+  // pena interrumpir a la trabajadora con una alerta por esto.
+  async function actualizarUbicacion(id: string, lat: number, lng: number) {
+    await supabase
+      .from('reservas')
+      .update({ ubicacion_lat: lat, ubicacion_lng: lng })
+      .eq('id', id)
+      .eq('estado', 'en_camino')
+  }
+
   if (cargando) {
     return <div className="p-6 text-center text-neutral-500">Cargando tu panel…</div>
   }
@@ -340,7 +351,9 @@ export function Panel() {
   }
 
   const directas = reservasPropias.filter((r) => r.modo === 'directo' && r.estado === 'solicitada')
-  const enCurso = reservasPropias.filter((r) => r.estado === 'aceptada' || r.estado === 'en_curso')
+  const enCurso = reservasPropias.filter(
+    (r) => r.estado === 'aceptada' || r.estado === 'en_camino' || r.estado === 'en_curso',
+  )
   const completadas = reservasPropias.filter((r) => r.estado === 'completada' && !calificadas.has(r.id))
   const postulacionesLista = Object.values(postulaciones)
 
@@ -492,8 +505,8 @@ export function Panel() {
       {directas.length > 0 && (
         <Seccion titulo="Solicitudes directas">
           {directas.map((r) => {
-            const seCruza = enCurso.some(
-              (otra) => seSolapan(r.fecha, r.hora, r.horas, otra.fecha, otra.hora, otra.horas),
+            const seCruza = enCurso.some((otra) =>
+              seSolapan(r.fecha, r.hora, r.horas, otra.fecha, otra.hora, otra.horas, MARGEN_TRASLADO_MINUTOS),
             )
             return (
             <div key={r.id} className="rounded-xl border border-neutral-200 bg-white p-3">
@@ -556,23 +569,12 @@ export function Panel() {
                   WhatsApp con {contactosClientes[r.cliente_id].nombre.split(' ')[0]}
                 </a>
               )}
-              {r.estado === 'aceptada' ? (
-                <button
-                  disabled={procesando === r.id}
-                  onClick={() => cambiarEstado(r.id, 'aceptada', { estado: 'en_curso', inicio_real: new Date().toISOString() })}
-                  className="mt-2 w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  Iniciar
-                </button>
-              ) : (
-                <button
-                  disabled={procesando === r.id}
-                  onClick={() => cambiarEstado(r.id, 'en_curso', { estado: 'completada', fin_real: new Date().toISOString() })}
-                  className="mt-2 w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  Finalizar
-                </button>
-              )}
+              <ControlServicio
+                reserva={r}
+                procesando={procesando === r.id}
+                onCambiarEstado={(cambios, desdeEstado) => cambiarEstado(r.id, desdeEstado, cambios)}
+                onActualizarUbicacion={(lat, lng) => actualizarUbicacion(r.id, lat, lng)}
+              />
             </div>
           ))}
         </Seccion>
@@ -766,6 +768,106 @@ function CompletarDocumentosMigratorios({
           {enviando ? 'Enviando…' : 'Enviar documentos'}
         </button>
       </div>
+    </div>
+  )
+}
+
+// Flujo tipo taxi: aceptada → en_camino (GPS real mientras dure este
+// estado) → en_curso (temporizador contra fin_estimado) → completada.
+function ControlServicio({
+  reserva,
+  procesando,
+  onCambiarEstado,
+  onActualizarUbicacion,
+}: {
+  reserva: Reserva
+  procesando: boolean
+  onCambiarEstado: (cambios: Record<string, unknown>, desdeEstado: string) => void
+  onActualizarUbicacion: (lat: number, lng: number) => void
+}) {
+  useEffect(() => {
+    if (reserva.estado !== 'en_camino' || !('geolocation' in navigator)) return
+    const watchId = navigator.geolocation.watchPosition(
+      (posicion) => onActualizarUbicacion(posicion.coords.latitude, posicion.coords.longitude),
+      () => {
+        // Sin permiso o sin señal: seguimos igual, la trabajadora puede
+        // continuar el flujo aunque no se comparta la ubicación.
+      },
+      { enableHighAccuracy: false, maximumAge: 30000, timeout: 20000 },
+    )
+    return () => navigator.geolocation.clearWatch(watchId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reserva.estado, reserva.id])
+
+  // Refresca la cuenta regresiva contra fin_estimado sin esperar a otro evento.
+  const [, forzarRender] = useState(0)
+  useEffect(() => {
+    if (reserva.estado !== 'en_curso') return
+    const id = window.setInterval(() => forzarRender((n) => n + 1), 30000)
+    return () => window.clearInterval(id)
+  }, [reserva.estado])
+
+  if (reserva.estado === 'aceptada') {
+    return (
+      <button
+        disabled={procesando}
+        onClick={() => onCambiarEstado({ estado: 'en_camino' }, 'aceptada')}
+        className="mt-2 w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        Voy en camino
+      </button>
+    )
+  }
+
+  if (reserva.estado === 'en_camino') {
+    return (
+      <div className="mt-2 flex flex-col gap-2">
+        <p className="text-xs text-neutral-500">
+          📍 Mientras vayas en camino compartimos tu ubicación para que la clienta sepa que ya vas llegando.
+        </p>
+        {!reserva.hora_llegada && (
+          <button
+            disabled={procesando}
+            onClick={() => onCambiarEstado({ hora_llegada: new Date().toISOString() }, 'en_camino')}
+            className="w-full rounded-lg border border-teal-700 px-3 py-2 text-sm font-semibold text-teal-700 disabled:opacity-60"
+          >
+            Ya llegué
+          </button>
+        )}
+        <button
+          disabled={procesando}
+          onClick={() => onCambiarEstado({ estado: 'en_curso' }, 'en_camino')}
+          className="w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          Iniciar servicio
+        </button>
+      </div>
+    )
+  }
+
+  // en_curso
+  const finEstimadoMs = reserva.fin_estimado ? new Date(reserva.fin_estimado).getTime() : null
+  const faltanMin = finEstimadoMs !== null ? Math.round((finEstimadoMs - Date.now()) / 60000) : null
+  const excedido = faltanMin !== null && faltanMin < 0
+
+  return (
+    <div className="mt-2 flex flex-col gap-2">
+      {faltanMin !== null && (
+        <p className={`text-xs font-medium ${excedido ? 'text-red-700' : 'text-neutral-500'}`}>
+          {excedido
+            ? `⏱ Ya superaste el tiempo estimado por ${Math.abs(faltanMin)} min. Si aún sigues trabajando, no hay problema: finaliza cuando termines.`
+            : faltanMin <= 15
+              ? `⏱ Tu servicio está por finalizar (quedan ~${faltanMin} min estimados).`
+              : `Fin estimado: ${new Date(reserva.fin_estimado as string).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`}
+        </p>
+      )}
+      <button
+        disabled={procesando}
+        onClick={() => onCambiarEstado({ estado: 'completada' }, 'en_curso')}
+        className="w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+      >
+        Finalizar servicio
+      </button>
     </div>
   )
 }

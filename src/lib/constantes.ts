@@ -65,11 +65,17 @@ export function etiquetaGenero(valor: string): string {
 export const ESTADO_RESERVA_LABELS: Record<string, string> = {
   solicitada: 'Buscando trabajadora',
   aceptada: 'Confirmada',
+  en_camino: 'En camino',
   en_curso: 'En curso',
   completada: 'Completada',
   cancelada: 'Cancelada',
   rechazada: 'Rechazada',
 }
+
+// Tiempo de traslado que se reserva entre un servicio y el siguiente del
+// mismo trabajador, para que no se agenden dos trabajos pegados sin margen
+// para movilizarse.
+export const MARGEN_TRASLADO_MINUTOS = 30
 
 export function fechaHoyLima(): string {
   // en-CA da formato YYYY-MM-DD. new Date().toISOString() usa UTC y se

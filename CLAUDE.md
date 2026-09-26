@@ -29,7 +29,7 @@ Construye una web app tipo Uber para limpieza doméstica por horas en Iquitos, P
 ### Trabajador
 1. **Panel** (`/panel`): toggle grande "Disponible ahora" (actualiza `trabajadores.disponible_ahora` y `ultima_actividad`). Si el trabajador no está verificado, mostrar aviso "Tu perfil está en revisión" y ocultar el toggle.
 2. **Solicitudes**: reservas `solicitada` en tiempo real (Realtime en `reservas` filtrado por `trabajador_id`). Acciones: Aceptar → `aceptada`; Rechazar → `rechazada`. Sonido/vibración al llegar una nueva.
-3. **Trabajo en curso**: Iniciar → `en_curso` + `inicio_real`; Finalizar → `completada` + `fin_real`. Luego puede calificar al cliente.
+3. **Control del servicio (tipo taxi)**: estados `aceptada` → `en_camino` → `en_curso` → `completada`. En camino → `en_camino_en` + activa GPS real (lat/lng, solo mientras dure este estado, sin mapa propio: se usa link externo a Google Maps); "Ya llegué" → `hora_llegada`; Iniciar servicio → `en_curso` + `inicio_real` + `fin_estimado` (calculado server-side); alertas en pantalla (no push) 15 min antes y al llegar a `fin_estimado`; Finalizar → `completada` + `fin_real`. Luego puede calificar al cliente.
 4. **Ganancias**: suma de `total` de completadas por semana y mes, y neto = total × (1 − comision_pct/100).
 5. **Mi perfil**: editar tarifa, servicios, descripción, foto.
 
@@ -65,4 +65,6 @@ La trabajadora acepta primero; el cliente elige entre las que aceptaron.
 - README con: crear proyecto Supabase, correr `schema.sql`, crear bucket `fotos`, configurar `.env`, `npm run dev`, deploy en Vercel.
 
 ## Fuera de alcance (no construir)
-Pasarela de pago, mapa con geolocalización, chat interno, notificaciones push, app nativa.
+Pasarela de pago, mapa propio/interactivo (con librerías pesadas), chat interno, notificaciones push, app nativa.
+
+Excepción explícita: sí está en alcance capturar la ubicación GPS real (lat/lng) del trabajador mientras el estado de una reserva es `en_camino`, para trazabilidad y para que el cliente vea que va en camino. Esto no es "mapa propio": no se agrega ninguna librería de mapas, la ubicación se muestra como texto ("actualizado hace X min") y opcionalmente un link externo a Google Maps.
