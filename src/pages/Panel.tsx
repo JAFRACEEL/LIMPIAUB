@@ -268,6 +268,16 @@ export function Panel() {
     setActualizando(false)
   }
 
+  async function verFotoReferencia(ruta: string | null) {
+    if (!ruta) return
+    const { data, error } = await supabase.storage.from('documentos').createSignedUrl(ruta, 300)
+    if (error || !data) {
+      alert(traducirError(error ?? new Error('No se pudo abrir la foto.')))
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
   async function alternarKitPropio() {
     if (!trabajador) return
     setActualizando(true)
@@ -492,6 +502,7 @@ export function Panel() {
                 {r.fecha} · {r.hora.slice(0, 5)} · {r.horas}h · {r.zona}
               </p>
               {r.con_materiales && <p className="text-xs text-amber-700">Incluye llevar tu kit de limpieza</p>}
+              <DetalleTrabajo reserva={r} onVerFoto={verFotoReferencia} />
               {seCruza && (
                 <p className="mt-1 text-xs font-medium text-red-700">
                   ⚠️ Este horario se cruza con otro trabajo que ya tienes.
@@ -531,6 +542,7 @@ export function Panel() {
                 {r.fecha} · {r.hora.slice(0, 5)} · {r.horas}h
               </p>
               {r.con_materiales && <p className="text-xs text-amber-700">Incluye llevar tu kit de limpieza</p>}
+              <DetalleTrabajo reserva={r} onVerFoto={verFotoReferencia} />
               {contactosClientes[r.cliente_id] && (
                 <a
                   href={whatsappUrl(
@@ -570,7 +582,10 @@ export function Panel() {
         <Seccion titulo="Tus postulaciones (esperando respuesta)">
           {postulacionesLista.map((p) => (
             <div key={p.id} className="rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-600">
-              {p.servicio} · {p.zona} · {p.horas}h
+              <p>
+                {p.servicio} · {p.zona} · {p.horas}h
+              </p>
+              <DetalleTrabajo reserva={p} onVerFoto={verFotoReferencia} />
             </div>
           ))}
         </Seccion>
@@ -585,6 +600,7 @@ export function Panel() {
                 {p.fecha} · {p.hora.slice(0, 5)} · {p.horas}h · {p.zona}
               </p>
               {p.con_materiales && <p className="text-xs text-amber-700">Incluye llevar tu kit de limpieza</p>}
+              <DetalleTrabajo reserva={p} onVerFoto={verFotoReferencia} />
               <p className="mt-1 text-sm font-semibold text-teal-700">
                 Pago neto estimado: S/{' '}
                 {calcularComision(
@@ -750,6 +766,37 @@ function CompletarDocumentosMigratorios({
           {enviando ? 'Enviando…' : 'Enviar documentos'}
         </button>
       </div>
+    </div>
+  )
+}
+
+interface ConDetalleTrabajo {
+  subtipo_servicio: string | null
+  descripcion_trabajo: string | null
+  foto_referencia_ruta: string | null
+}
+
+function DetalleTrabajo({
+  reserva,
+  onVerFoto,
+}: {
+  reserva: ConDetalleTrabajo
+  onVerFoto: (ruta: string | null) => void
+}) {
+  if (!reserva.subtipo_servicio && !reserva.descripcion_trabajo && !reserva.foto_referencia_ruta) return null
+  return (
+    <div className="mt-1 text-sm text-neutral-600">
+      {reserva.subtipo_servicio && <p>{reserva.subtipo_servicio}</p>}
+      {reserva.descripcion_trabajo && <p>{reserva.descripcion_trabajo}</p>}
+      {reserva.foto_referencia_ruta && (
+        <button
+          type="button"
+          onClick={() => onVerFoto(reserva.foto_referencia_ruta)}
+          className="mt-1 text-xs font-medium text-teal-700 underline"
+        >
+          Ver foto de referencia
+        </button>
+      )}
     </div>
   )
 }

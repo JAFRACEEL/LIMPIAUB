@@ -153,6 +153,8 @@ export function MisReservas() {
                   · {r.hora.slice(0, 5)} · {r.horas}h
                 </p>
                 <p className="text-sm text-neutral-500">{r.zona}</p>
+                {r.subtipo_servicio && <p className="text-sm text-neutral-500">{r.subtipo_servicio}</p>}
+                {r.descripcion_trabajo && <p className="text-sm text-neutral-500">{r.descripcion_trabajo}</p>}
 
                 {editandoDireccion === r.id ? (
                   <div className="mt-1 flex flex-col gap-2">

@@ -32,6 +32,8 @@ interface ClienteAdmin {
 interface ReservaAdmin {
   id: string
   servicio: string
+  subtipo_servicio: string | null
+  descripcion_trabajo: string | null
   fecha: string
   hora: string
   estado: string
@@ -94,7 +96,9 @@ export function Admin() {
     setCargandoDetalle('reservas')
     const { data, error } = await supabase
       .from('reservas')
-      .select('id, servicio, fecha, hora, estado, total, zona, perfiles(nombre), trabajadores(perfiles(nombre))')
+      .select(
+        'id, servicio, subtipo_servicio, descripcion_trabajo, fecha, hora, estado, total, zona, perfiles(nombre), trabajadores(perfiles(nombre))',
+      )
       .order('creado_en', { ascending: false })
       .limit(50)
     if (error) alert(traducirError(error))
@@ -453,6 +457,8 @@ export function Admin() {
                 <p className="text-neutral-500">
                   {r.fecha} · {r.hora.slice(0, 5)} · {r.zona}
                 </p>
+                {r.subtipo_servicio && <p className="text-neutral-500">{r.subtipo_servicio}</p>}
+                {r.descripcion_trabajo && <p className="text-neutral-500">{r.descripcion_trabajo}</p>}
                 <p className="text-neutral-500">
                   Cliente: {r.perfiles?.nombre ?? '—'} · Trabajadora: {r.trabajadores?.perfiles.nombre ?? '—'}
                 </p>

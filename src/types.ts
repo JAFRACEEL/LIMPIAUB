@@ -76,6 +76,9 @@ export interface Reserva {
   cliente_id: string
   trabajador_id: string | null
   servicio: string
+  subtipo_servicio: string | null
+  descripcion_trabajo: string | null
+  foto_referencia_ruta: string | null
   fecha: string
   hora: string
   horas: number
@@ -114,6 +117,9 @@ export interface CandidaturaConTrabajador extends Candidatura {
 export interface PedidoAbierto {
   id: string
   servicio: string
+  subtipo_servicio: string | null
+  descripcion_trabajo: string | null
+  foto_referencia_ruta: string | null
   zona: string
   fecha: string
   hora: string

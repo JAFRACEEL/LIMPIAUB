@@ -17,16 +17,7 @@ export type Zona = (typeof ZONAS)[number]
 
 export const MAX_ZONAS_TRABAJADOR = 3
 
-export const SERVICIOS = [
-  'Casas y departamentos',
-  'Oficinas y comercios',
-  'Hospedajes / Airbnb',
-  'Limpieza profunda / post fiesta',
-  'Lavado y planchado',
-  'Post construcción',
-] as const
-
-export type Servicio = (typeof SERVICIOS)[number]
+export { NOMBRES_SERVICIOS as SERVICIOS } from './catalogoServicios'
 
 export const ANTECEDENTES = [
   { value: 'vigente', label: 'Vigente' },
@@ -103,6 +94,13 @@ export function inicioSemanaLima(): string {
 
 export function inicioMesLima(): string {
   return `${fechaHoyLima().slice(0, 7)}-01`
+}
+
+// TODO: reemplazar con los datos reales de pago de Limpi.
+export const DATOS_PAGO: Record<'yape' | 'plin' | 'transferencia', string> = {
+  yape: '(pendiente: agrega aquí el número de Yape de Limpi)',
+  plin: '(pendiente: agrega aquí el número de Plin de Limpi)',
+  transferencia: '(pendiente: agrega aquí banco, número de cuenta/CCI y titular)',
 }
 
 export function whatsappUrl(celular: string, mensaje?: string): string {
