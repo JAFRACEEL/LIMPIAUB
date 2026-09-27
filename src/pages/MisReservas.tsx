@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Component, lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
@@ -7,6 +7,23 @@ import { useToasts } from '../lib/useToasts'
 import { Estrellas } from '../components/Estrellas'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
 import type { Reserva, TrabajadorContacto } from '../types'
+
+// Se carga solo cuando hace falta (una reserva en camino), para no meter
+// Leaflet en el bundle principal de gente que nunca llega a ver el mapa.
+const MapaSeguimiento = lazy(() => import('../components/MapaSeguimiento'))
+
+// Suspense solo cubre la carga; si falla la descarga del chunk del mapa
+// (típico con conexión inestable en un celular de gama baja), sin este
+// límite de error se caería toda la pantalla de reservas, no solo el mapa.
+class LimiteMapa extends Component<{ children: ReactNode; alternativa: ReactNode }, { fallo: boolean }> {
+  state = { fallo: false }
+  static getDerivedStateFromError() {
+    return { fallo: true }
+  }
+  render() {
+    return this.state.fallo ? this.props.alternativa : this.props.children
+  }
+}
 
 export function MisReservas() {
   const { session } = useAuth()
@@ -226,31 +243,48 @@ export function MisReservas() {
                 )}
 
                 {contacto && r.estado === 'en_camino' && (
-                  <div className="mt-2 rounded-lg bg-teal-50 px-3 py-2 text-sm text-teal-800">
-                    <p className="font-medium">🚗 {contacto.nombre.split(' ')[0]} va en camino</p>
-                    {r.hora_llegada && (
-                      <p className="text-xs text-teal-700">
-                        Llegó a las{' '}
-                        {new Date(r.hora_llegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    )}
-                    {r.ubicacion_actualizada_en && (
-                      <p className="text-xs text-teal-700">
-                        Ubicación actualizada hace{' '}
-                        {Math.max(0, Math.round((Date.now() - new Date(r.ubicacion_actualizada_en).getTime()) / 60000))}{' '}
-                        min
-                      </p>
-                    )}
-                    {r.ubicacion_lat != null && r.ubicacion_lng != null && (
-                      <a
-                        href={`https://www.google.com/maps?q=${r.ubicacion_lat},${r.ubicacion_lng}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-1 inline-block text-xs font-semibold underline"
+                  <div className="mt-2 rounded-xl border border-teal-200 bg-teal-50 p-2">
+                    <p className="px-1 pb-1 text-sm font-medium text-teal-800">
+                      🚗 {contacto.nombre.split(' ')[0]} va en camino
+                    </p>
+                    {r.ubicacion_lat != null && r.ubicacion_lng != null ? (
+                      <LimiteMapa
+                        alternativa={
+                          <a
+                            href={`https://www.google.com/maps?q=${r.ubicacion_lat},${r.ubicacion_lng}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block px-1 pb-1 text-xs font-semibold text-teal-800 underline"
+                          >
+                            No pudimos cargar el mapa. Ver ubicación en Google Maps
+                          </a>
+                        }
                       >
-                        Ver ubicación en el mapa
-                      </a>
+                        <Suspense fallback={<div className="h-56 w-full animate-pulse rounded-xl bg-teal-100" />}>
+                          <MapaSeguimiento lat={r.ubicacion_lat} lng={r.ubicacion_lng} nombre={contacto.nombre} />
+                        </Suspense>
+                      </LimiteMapa>
+                    ) : (
+                      <p className="px-1 pb-1 text-xs text-teal-700">Esperando su ubicación…</p>
                     )}
+                    <div className="flex flex-wrap gap-x-3 px-1 pt-1 text-xs text-teal-700">
+                      {r.hora_llegada && (
+                        <span>
+                          Llegó a las{' '}
+                          {new Date(r.hora_llegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
+                      {r.ubicacion_actualizada_en && (
+                        <span>
+                          Actualizado hace{' '}
+                          {Math.max(
+                            0,
+                            Math.round((Date.now() - new Date(r.ubicacion_actualizada_en).getTime()) / 60000),
+                          )}{' '}
+                          min
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
 
