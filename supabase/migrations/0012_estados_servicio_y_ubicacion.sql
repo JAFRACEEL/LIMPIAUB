@@ -8,11 +8,13 @@
 -- deja usar un valor de enum recién agregado dentro de la misma
 -- transacción en la que se agregó, y el SQL Editor de Supabase corre todo
 -- el script pegado como una sola transacción). ----------
--- v_pedidos_abiertos filtra por r.estado en su WHERE: Postgres no deja
--- cambiar el tipo de una columna mientras una vista dependa de ella, así
--- que hay que soltarla antes y recrearla después (con el mismo texto de la
--- migración 0011, que es su versión vigente).
+-- v_pedidos_abiertos filtra por r.estado en su WHERE, y la política
+-- cal_insert (calificaciones) también depende de reservas.estado en su
+-- WITH CHECK: Postgres no deja cambiar el tipo de una columna mientras una
+-- vista o una política dependan de ella, así que hay que soltarlas antes y
+-- recrearlas después (mismo texto que su versión vigente).
 drop view if exists v_pedidos_abiertos;
+drop policy if exists cal_insert on calificaciones;
 
 alter table reservas alter column estado type text using estado::text;
 alter table reservas alter column estado set default 'solicitada';
@@ -38,6 +40,14 @@ where r.estado = 'solicitada'
   and (not r.con_materiales or t.kit_propio)
   and not exists (select 1 from candidaturas c where c.reserva_id = r.id and c.trabajador_id = auth.uid())
   and (select count(*) from candidaturas c2 where c2.reserva_id = r.id and c2.estado = 'pendiente') < 3;
+
+create policy cal_insert on calificaciones for insert
+  with check (
+    auth.uid() = de_id and
+    exists (select 1 from reservas r where r.id = reserva_id
+            and r.estado = 'completada'
+            and auth.uid() in (r.cliente_id, r.trabajador_id))
+  );
 
 -- ---------- Columnas de control de tiempos y ubicación ----------
 alter table reservas add column if not exists en_camino_en timestamptz;
