@@ -39,6 +39,9 @@ export function Navbar() {
                 Admin
               </Link>
             )}
+            <Link to="/activar-notificaciones" className="text-neutral-500" aria-label="Notificaciones">
+              🔔
+            </Link>
             <button onClick={salir} className="font-medium text-neutral-500">
               Salir
             </button>

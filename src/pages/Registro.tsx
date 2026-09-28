@@ -294,7 +294,9 @@ export function Registro() {
     }
 
     setEnviando(false)
-    navigate(rol === 'trabajador' ? '/panel' : '/buscar')
+    // Pasa por "/" para que el paso de activar notificaciones (Inicio en
+    // App.tsx) se interponga antes de llegar a su panel/búsqueda.
+    navigate('/')
   }
 
   return (

@@ -16,6 +16,45 @@ self.addEventListener('activate', (event) => {
   self.clients.claim()
 })
 
+// Notificaciones push: el payload lo arma la Edge Function `send-push`
+// como { titulo, cuerpo, url }.
+self.addEventListener('push', (event) => {
+  let datos = { titulo: 'Limpi', cuerpo: 'Tienes una novedad en Limpi.', url: '/' }
+  try {
+    if (event.data) datos = { ...datos, ...event.data.json() }
+  } catch {
+    // Payload no era JSON: nos quedamos con el texto por defecto.
+  }
+  event.waitUntil(
+    self.registration.showNotification(datos.titulo, {
+      body: datos.cuerpo,
+      icon: '/icon.svg',
+      badge: '/icon.svg',
+      vibrate: [200, 100, 200],
+      data: { url: datos.url },
+    }),
+  )
+})
+
+// Al tocar la notificación: si ya hay una pestaña de Limpi abierta, la
+// enfoca y navega ahí (evita abrir una pestaña nueva encima de otra); si no,
+// abre una.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const destino = event.notification.data?.url ?? '/'
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
+      for (const cliente of listaClientes) {
+        if ('focus' in cliente) {
+          cliente.postMessage({ tipo: 'limpi-navegar', url: destino })
+          return cliente.focus()
+        }
+      }
+      return self.clients.openWindow(destino)
+    }),
+  )
+})
+
 self.addEventListener('fetch', (event) => {
   const { request } = event
   // Nunca interceptar Supabase (auth, datos, realtime) ni métodos que no

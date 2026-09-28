@@ -1,7 +1,10 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
 import { RutaProtegida } from './components/RutaProtegida'
 import { useAuth } from './context/AuthContext'
+import { destinoPorRol } from './lib/rutas'
+import { notifYaDecidido } from './lib/push'
 import { Login } from './pages/Login'
 import { Registro } from './pages/Registro'
 import { RecuperarContrasena } from './pages/RecuperarContrasena'
@@ -12,17 +15,17 @@ import { Admin } from './pages/Admin'
 import { PerfilTrabajador } from './pages/PerfilTrabajador'
 import { Reservar } from './pages/Reservar'
 import { MisReservas } from './pages/MisReservas'
+import { ActivarNotificaciones } from './pages/ActivarNotificaciones'
 
 function Inicio() {
   const { cargando, session, perfil } = useAuth()
   if (cargando) return <div className="p-6 text-center text-neutral-500">Cargando…</div>
   if (!session) return <Navigate to="/login" replace />
-  if (perfil?.rol === 'trabajador') return <Navigate to="/panel" replace />
-  if (perfil?.rol === 'admin') return <Navigate to="/admin" replace />
-  if (perfil?.rol === 'cliente') return <Navigate to="/buscar" replace />
   // Hay sesión pero no encontramos tu fila en `perfiles`: mandarte al lado
   // cliente por defecto aquí sería confuso (pareces cliente sin serlo).
-  return <PerfilNoEncontrado />
+  if (!perfil) return <PerfilNoEncontrado />
+  if (!notifYaDecidido(session.user.id)) return <Navigate to="/activar-notificaciones" replace />
+  return <Navigate to={destinoPorRol(perfil)} replace />
 }
 
 function PerfilNoEncontrado() {
@@ -38,6 +41,20 @@ function PerfilNoEncontrado() {
 }
 
 function App() {
+  const navigate = useNavigate()
+
+  // Al tocar una notificación push con la app ya abierta en otra pestaña,
+  // el service worker enfoca esa pestaña y nos manda a dónde navegar (una
+  // pestaña ya enfocada no cambia de URL sola).
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+    function onMensaje(e: MessageEvent) {
+      if (e.data?.tipo === 'limpi-navegar' && typeof e.data.url === 'string') navigate(e.data.url)
+    }
+    navigator.serviceWorker.addEventListener('message', onMensaje)
+    return () => navigator.serviceWorker.removeEventListener('message', onMensaje)
+  }, [navigate])
+
   return (
     <div className="min-h-dvh">
       <Navbar />
@@ -76,6 +93,14 @@ function App() {
           element={
             <RutaProtegida rolRequerido="cliente">
               <MisReservas />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/activar-notificaciones"
+          element={
+            <RutaProtegida>
+              <ActivarNotificaciones />
             </RutaProtegida>
           }
         />

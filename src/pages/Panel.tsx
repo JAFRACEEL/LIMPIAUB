@@ -1,12 +1,16 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
 import { useToasts } from '../lib/useToasts'
 import { inicioSemanaLima, inicioMesLima, whatsappUrl, MARGEN_TRASLADO_MINUTOS } from '../lib/constantes'
 import { calcularComision, seSolapan } from '../lib/calculos'
+import { tieneSuscripcionGuardada } from '../lib/push'
+import { reproducirSonidoAlerta } from '../lib/sonido'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
 import { EditarPerfilTrabajador } from '../components/EditarPerfilTrabajador'
+import { PedidoEntranteOverlay, type PedidoEntranteOverlayData } from '../components/PedidoEntranteOverlay'
 import type { PedidoAbierto, PrestamoKit, PrestamoKitMovimiento, Reserva, Trabajador } from '../types'
 
 function vibrar() {
@@ -32,10 +36,19 @@ export function Panel() {
   const [actualizando, setActualizando] = useState(false)
   const [procesando, setProcesando] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [tieneNotificaciones, setTieneNotificaciones] = useState<boolean | null>(null)
+  const [descartadosAbiertos, setDescartadosAbiertos] = useState<Set<string>>(new Set())
+  const [overlayMinimizado, setOverlayMinimizado] = useState(false)
+  const [overlayConfirmacion, setOverlayConfirmacion] = useState<{
+    tipo: 'aceptado' | 'rechazado'
+    titulo: string
+    mensaje: string
+  } | null>(null)
   const { toasts, agregar } = useToasts()
   const pedidosAbiertosRef = useRef<PedidoAbierto[]>([])
   const primeraCargaRef = useRef(true)
   const trabajadorRef = useRef<Trabajador | null>(null)
+  const idPedidoActualRef = useRef<string | null>(null)
 
   const cargarTrabajador = useCallback(async () => {
     if (!session) return null
@@ -71,12 +84,12 @@ export function Panel() {
     const nuevos = (data as PedidoAbierto[]) ?? []
     if (!primeraCargaRef.current && nuevos.length > pedidosAbiertosRef.current.length) {
       vibrar()
-      agregar('Tienes un nuevo pedido disponible')
+      reproducirSonidoAlerta()
     }
     primeraCargaRef.current = false
     pedidosAbiertosRef.current = nuevos
     setPedidosAbiertos(nuevos)
-  }, [agregar])
+  }, [])
 
   const cargarCalificadas = useCallback(async () => {
     if (!session) return
@@ -150,6 +163,11 @@ export function Panel() {
     setContactosClientes(mapa)
   }, [session])
 
+  const cargarNotificaciones = useCallback(async () => {
+    if (!session) return
+    setTieneNotificaciones(await tieneSuscripcionGuardada(session.user.id))
+  }, [session])
+
   const cargarTodo = useCallback(async () => {
     const t = await cargarTrabajador()
     await Promise.all([
@@ -160,6 +178,7 @@ export function Panel() {
       cargarGanancias(),
       cargarPrestamo(),
       cargarContactosClientes(),
+      cargarNotificaciones(),
     ])
     setCargando(false)
   }, [
@@ -171,6 +190,7 @@ export function Panel() {
     cargarGanancias,
     cargarPrestamo,
     cargarContactosClientes,
+    cargarNotificaciones,
   ])
 
   useEffect(() => {
@@ -192,7 +212,7 @@ export function Panel() {
         { event: 'INSERT', schema: 'public', table: 'reservas', filter: `trabajador_id=eq.${uid}` },
         () => {
           vibrar()
-          agregar('Tienes un nuevo pedido directo')
+          reproducirSonidoAlerta()
           cargarReservasPropias()
           cargarContactosClientes()
         },
@@ -248,6 +268,126 @@ export function Panel() {
     }
   }, [session, agregar, cargarReservasPropias, cargarPedidosAbiertos, cargarContactosClientes])
 
+  // Cola de pedidos entrantes (directos + abiertos) para la pantalla completa
+  // tipo "llamada entrante": uno a la vez, los directos primero (la piden a
+  // ella específicamente) y luego los abiertos por ventana más próxima a
+  // vencer.
+  const colaEntrantes = useMemo<PedidoEntranteOverlayData[]>(() => {
+    if (!trabajador) return []
+    const items: PedidoEntranteOverlayData[] = []
+    const enCursoActual = reservasPropias.filter(
+      (x) => x.estado === 'aceptada' || x.estado === 'en_camino' || x.estado === 'en_curso',
+    )
+    for (const r of reservasPropias) {
+      if (r.modo !== 'directo' || r.estado !== 'solicitada') continue
+      const subtotal = (r.tarifa_hora ?? trabajador.tarifa_hora) * r.horas
+      const seCruza = enCursoActual.some(
+        (otra) => otra.id !== r.id && seSolapan(r.fecha, r.hora, r.horas, otra.fecha, otra.hora, otra.horas, MARGEN_TRASLADO_MINUTOS),
+      )
+      items.push({
+        id: r.id,
+        tipo: 'directo',
+        servicio: r.servicio,
+        subtipoServicio: r.subtipo_servicio,
+        descripcionTrabajo: r.descripcion_trabajo,
+        fotoReferenciaRuta: r.foto_referencia_ruta,
+        zona: r.zona,
+        fecha: r.fecha,
+        hora: r.hora,
+        horas: r.horas,
+        conMateriales: r.con_materiales,
+        ventanaCierraEn: r.ventana_cierra_en,
+        pagoNeto: calcularComision(subtotal, r.comision_pct, r.recargo_materiales).netoTrabajadora,
+        advertencia: seCruza ? 'Este horario se cruza con otro trabajo que ya tienes.' : null,
+      })
+    }
+    for (const p of pedidosAbiertos) {
+      if (descartadosAbiertos.has(p.id)) continue
+      items.push({
+        id: p.id,
+        tipo: 'abierto',
+        servicio: p.servicio,
+        subtipoServicio: p.subtipo_servicio,
+        descripcionTrabajo: p.descripcion_trabajo,
+        fotoReferenciaRuta: p.foto_referencia_ruta,
+        zona: p.zona,
+        fecha: p.fecha,
+        hora: p.hora,
+        horas: p.horas,
+        conMateriales: p.con_materiales,
+        ventanaCierraEn: p.ventana_cierra_en,
+        pagoNeto: calcularComision(trabajador.tarifa_hora * p.horas, p.comision_pct, p.recargo_materiales)
+          .netoTrabajadora,
+      })
+    }
+    items.sort((a, b) => {
+      if (a.tipo !== b.tipo) return a.tipo === 'directo' ? -1 : 1
+      const av = a.ventanaCierraEn ? new Date(a.ventanaCierraEn).getTime() : Infinity
+      const bv = b.ventanaCierraEn ? new Date(b.ventanaCierraEn).getTime() : Infinity
+      return av - bv
+    })
+    return items
+  }, [reservasPropias, pedidosAbiertos, descartadosAbiertos, trabajador])
+
+  const pedidoActual = colaEntrantes[0] ?? null
+
+  // Un pedido nuevo al frente de la cola siempre se muestra a pantalla
+  // completa, aunque la trabajadora haya minimizado el anterior.
+  useEffect(() => {
+    if (pedidoActual && pedidoActual.id !== idPedidoActualRef.current) setOverlayMinimizado(false)
+    idPedidoActualRef.current = pedidoActual?.id ?? null
+  }, [pedidoActual])
+
+  async function overlayResponderDirecta(id: string, accion: 'aceptar' | 'rechazar') {
+    const exito = await cambiarEstado(id, 'solicitada', { estado: accion === 'aceptar' ? 'aceptada' : 'rechazada' })
+    if (!exito) return
+    setOverlayConfirmacion(
+      accion === 'aceptar'
+        ? { tipo: 'aceptado', titulo: 'Pedido aceptado', mensaje: 'Ya puedes coordinar el servicio con la clienta.' }
+        : {
+            tipo: 'rechazado',
+            titulo: 'Pedido rechazado',
+            mensaje: 'No pasa nada, seguimos buscando otras trabajadoras.',
+          },
+    )
+    window.setTimeout(() => setOverlayConfirmacion(null), 1300)
+  }
+
+  async function overlayResponderAbierto(pedido: PedidoEntranteOverlayData, accion: 'aceptar' | 'rechazar') {
+    if (accion === 'rechazar') {
+      setDescartadosAbiertos((prev) => new Set(prev).add(pedido.id))
+      setOverlayConfirmacion({
+        tipo: 'rechazado',
+        titulo: 'Pedido descartado',
+        mensaje: 'No pasa nada: rechazar un pedido abierto no te penaliza.',
+      })
+      window.setTimeout(() => setOverlayConfirmacion(null), 1300)
+      return
+    }
+    const original = pedidosAbiertos.find((p) => p.id === pedido.id)
+    if (!original) return
+    const exito = await postularme(original)
+    if (!exito) return
+    setOverlayConfirmacion({
+      tipo: 'aceptado',
+      titulo: 'Postulación enviada',
+      mensaje: 'Espera a que la clienta te elija. Te avisamos apenas responda.',
+    })
+    window.setTimeout(() => setOverlayConfirmacion(null), 1300)
+  }
+
+  function onOverlayAceptar() {
+    if (!pedidoActual) return
+    if (pedidoActual.tipo === 'directo') overlayResponderDirecta(pedidoActual.id, 'aceptar')
+    else overlayResponderAbierto(pedidoActual, 'aceptar')
+  }
+
+  function onOverlayRechazar() {
+    if (!pedidoActual) return
+    if (pedidoActual.tipo === 'directo') overlayResponderDirecta(pedidoActual.id, 'rechazar')
+    else overlayResponderAbierto(pedidoActual, 'rechazar')
+  }
+
   async function alternarDisponible() {
     if (!trabajador) return
     setActualizando(true)
@@ -293,20 +433,22 @@ export function Panel() {
     setActualizando(false)
   }
 
-  async function postularme(pedido: PedidoAbierto) {
+  async function postularme(pedido: PedidoAbierto): Promise<boolean> {
     setProcesando(pedido.id)
     const { error: errorRpc } = await supabase.rpc('postularme_a_reserva', { p_reserva_id: pedido.id })
+    let exito = false
     if (errorRpc) {
       alert(traducirError(errorRpc))
     } else {
       setPostulaciones((prev) => ({ ...prev, [pedido.id]: pedido }))
       setPedidosAbiertos((prev) => prev.filter((p) => p.id !== pedido.id))
-      agregar('Postulación enviada. Espera a que la clienta elija.')
+      exito = true
     }
     setProcesando(null)
+    return exito
   }
 
-  async function cambiarEstado(id: string, desdeEstado: string, cambios: Record<string, unknown>) {
+  async function cambiarEstado(id: string, desdeEstado: string, cambios: Record<string, unknown>): Promise<boolean> {
     setProcesando(id)
     // Filtramos por el estado que esperábamos ver: si la clienta canceló (u
     // otra cosa cambió el estado) justo antes de este clic, la fila ya no
@@ -317,12 +459,15 @@ export function Panel() {
       .eq('id', id)
       .eq('estado', desdeEstado)
       .select('id')
+    let exito = false
     if (errorUpdate) alert(traducirError(errorUpdate))
     else if (!data || data.length === 0) agregar('Esta reserva ya había cambiado. Actualizamos tu lista.')
+    else exito = true
     cargarReservasPropias()
     cargarGanancias()
     cargarPrestamo()
     setProcesando(null)
+    return exito
   }
 
   // Best-effort: si falla (sin permiso de ubicación, sin señal, la reserva
@@ -350,7 +495,6 @@ export function Panel() {
     )
   }
 
-  const directas = reservasPropias.filter((r) => r.modo === 'directo' && r.estado === 'solicitada')
   const enCurso = reservasPropias.filter(
     (r) => r.estado === 'aceptada' || r.estado === 'en_camino' || r.estado === 'en_curso',
   )
@@ -359,6 +503,18 @@ export function Panel() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
+      <PedidoEntranteOverlay
+        pedido={overlayConfirmacion ? null : pedidoActual}
+        confirmacion={overlayConfirmacion}
+        procesando={procesando === pedidoActual?.id}
+        minimizado={overlayMinimizado}
+        onAceptar={onOverlayAceptar}
+        onRechazar={onOverlayRechazar}
+        onMinimizar={() => setOverlayMinimizado(true)}
+        onMaximizar={() => setOverlayMinimizado(false)}
+        onVerFoto={verFotoReferencia}
+      />
+
       <h1 className="mb-1 text-2xl font-bold">Tu panel</h1>
       <p className="mb-6 text-neutral-500">Activa tu disponibilidad cuando quieras recibir pedidos.</p>
 
@@ -386,7 +542,23 @@ export function Panel() {
           <CompletarDocumentosMigratorios trabajadorId={trabajador.id} onListo={cargarTrabajador} />
         )}
 
-      {trabajador.habilitado_trabajar && (
+      {trabajador.habilitado_trabajar && tieneNotificaciones === false && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <p className="font-semibold text-amber-900">Disponible ahora</p>
+          <p className="mt-1 text-sm text-amber-800">
+            Activa las notificaciones para recibir pedidos: son la única forma de enterarte al toque cuando llega
+            uno, aunque tengas la app cerrada.
+          </p>
+          <Link
+            to="/activar-notificaciones"
+            className="mt-3 inline-block rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white"
+          >
+            Activar notificaciones
+          </Link>
+        </div>
+      )}
+
+      {trabajador.habilitado_trabajar && tieneNotificaciones !== false && (
         <div className="rounded-2xl border border-neutral-200 bg-white p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -401,7 +573,7 @@ export function Panel() {
               role="switch"
               aria-checked={trabajador.disponible_ahora}
               onClick={alternarDisponible}
-              disabled={actualizando}
+              disabled={actualizando || tieneNotificaciones === null}
               className={`relative h-9 w-16 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
                 trabajador.disponible_ahora ? 'bg-green-600' : 'bg-neutral-300'
               }`}
@@ -502,47 +674,6 @@ export function Panel() {
 
       <EditarPerfilTrabajador trabajador={trabajador} onActualizado={cargarTrabajador} />
 
-      {directas.length > 0 && (
-        <Seccion titulo="Solicitudes directas">
-          {directas.map((r) => {
-            const seCruza = enCurso.some((otra) =>
-              seSolapan(r.fecha, r.hora, r.horas, otra.fecha, otra.hora, otra.horas, MARGEN_TRASLADO_MINUTOS),
-            )
-            return (
-            <div key={r.id} className="rounded-xl border border-neutral-200 bg-white p-3">
-              <p className="font-semibold">{r.servicio}</p>
-              <p className="text-sm text-neutral-500">
-                {r.fecha} · {r.hora.slice(0, 5)} · {r.horas}h · {r.zona}
-              </p>
-              {r.con_materiales && <p className="text-xs text-amber-700">Incluye llevar tu kit de limpieza</p>}
-              <DetalleTrabajo reserva={r} onVerFoto={verFotoReferencia} />
-              {seCruza && (
-                <p className="mt-1 text-xs font-medium text-red-700">
-                  ⚠️ Este horario se cruza con otro trabajo que ya tienes.
-                </p>
-              )}
-              <div className="mt-2 flex gap-2">
-                <button
-                  disabled={procesando === r.id}
-                  onClick={() => cambiarEstado(r.id, 'solicitada', { estado: 'aceptada' })}
-                  className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                >
-                  Aceptar
-                </button>
-                <button
-                  disabled={procesando === r.id}
-                  onClick={() => cambiarEstado(r.id, 'solicitada', { estado: 'rechazada' })}
-                  className="flex-1 rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 disabled:opacity-60"
-                >
-                  Rechazar
-                </button>
-              </div>
-            </div>
-            )
-          })}
-        </Seccion>
-      )}
-
       {enCurso.length > 0 && (
         <Seccion titulo="Trabajo en curso">
           {enCurso.map((r) => (
@@ -588,36 +719,6 @@ export function Panel() {
                 {p.servicio} · {p.zona} · {p.horas}h
               </p>
               <DetalleTrabajo reserva={p} onVerFoto={verFotoReferencia} />
-            </div>
-          ))}
-        </Seccion>
-      )}
-
-      {pedidosAbiertos.length > 0 && (
-        <Seccion titulo="Pedidos disponibles">
-          {pedidosAbiertos.map((p) => (
-            <div key={p.id} className="rounded-xl border border-neutral-200 bg-white p-3">
-              <p className="font-semibold">{p.servicio}</p>
-              <p className="text-sm text-neutral-500">
-                {p.fecha} · {p.hora.slice(0, 5)} · {p.horas}h · {p.zona}
-              </p>
-              {p.con_materiales && <p className="text-xs text-amber-700">Incluye llevar tu kit de limpieza</p>}
-              <DetalleTrabajo reserva={p} onVerFoto={verFotoReferencia} />
-              <p className="mt-1 text-sm font-semibold text-teal-700">
-                Pago neto estimado: S/{' '}
-                {calcularComision(
-                  trabajador.tarifa_hora * p.horas,
-                  p.comision_pct,
-                  p.recargo_materiales,
-                ).netoTrabajadora.toFixed(2)}
-              </p>
-              <button
-                disabled={procesando === p.id}
-                onClick={() => postularme(p)}
-                className="mt-2 w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                Acepto
-              </button>
             </div>
           ))}
         </Seccion>
