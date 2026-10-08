@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import type { DetallesServicio } from '../lib/preguntasServicio'
+import { DetallesServicioVista } from './DetallesServicioVista'
 
 export interface PedidoEntranteOverlayData {
   id: string
@@ -7,6 +9,7 @@ export interface PedidoEntranteOverlayData {
   subtipoServicio: string | null
   descripcionTrabajo: string | null
   fotoReferenciaRuta: string | null
+  detallesServicio: DetallesServicio | null
   zona: string
   fecha: string
   hora: string
@@ -166,15 +169,12 @@ export function PedidoEntranteOverlay({
               {pedido.descripcionTrabajo && (
                 <p className="mt-2 border-t border-white/20 pt-2 text-teal-50">{pedido.descripcionTrabajo}</p>
               )}
-              {pedido.fotoReferenciaRuta && (
-                <button
-                  type="button"
-                  onClick={() => onVerFoto(pedido.fotoReferenciaRuta)}
-                  className="mt-2 text-xs font-semibold text-white underline"
-                >
-                  Ver foto de referencia
-                </button>
-              )}
+              <DetallesServicioVista
+                claro
+                detalles={pedido.detallesServicio}
+                fotoLegado={pedido.fotoReferenciaRuta}
+                onVerFoto={onVerFoto}
+              />
             </div>
 
             <div className="flex w-full gap-4">

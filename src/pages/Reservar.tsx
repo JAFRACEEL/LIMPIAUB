@@ -5,7 +5,17 @@ import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
 import { ZONAS, DATOS_PAGO, fechaHoyLima } from '../lib/constantes'
 import { calcularTotal } from '../lib/calculos'
-import { SelectorServicio } from '../components/SelectorServicio'
+import { SelectorServicio, type ResultadoServicio } from '../components/SelectorServicio'
+import { buscarServicioPorNombre, type Respuestas } from '../lib/catalogoServicios'
+import {
+  avisosActivos,
+  estimarFechaEntrega,
+  preguntasVisibles,
+  resumenRespuestas,
+  validarRespuestas,
+  type DetallesServicio,
+} from '../lib/preguntasServicio'
+import { PreguntaCampo } from '../components/PreguntaCampo'
 import type { TrabajadorPublico } from '../types'
 
 const RECARGO_KIT_TRABAJADORA = 18
@@ -28,6 +38,11 @@ export function Reservar() {
   const [requiereDescripcionTrabajo, setRequiereDescripcionTrabajo] = useState(false)
   const [descripcionTrabajo, setDescripcionTrabajo] = useState('')
   const [fotoReferencia, setFotoReferencia] = useState<File | null>(null)
+  const [subtipoId, setSubtipoId] = useState<string | null>(null)
+  const [pideMateriales, setPideMateriales] = useState(true)
+  const [configFotos, setConfigFotos] = useState<ResultadoServicio['fotos']>(null)
+  const [fotosServicio, setFotosServicio] = useState<File[]>([])
+  const [respuestas, setRespuestas] = useState<Respuestas>({})
 
   const [fecha, setFecha] = useState('')
   const [hora, setHora] = useState('')
@@ -96,7 +111,16 @@ export function Reservar() {
 
   const puedeTraerKit = trabajadorDirecto ? trabajadorDirecto.kit_propio : true
 
-  const conMateriales = seccionServicio === 'limpieza' && materiales === 'no' && opcionSinMateriales === 'trae_kit'
+  const preguntas = preguntasVisibles(servicio, subtipoId, respuestas)
+  const avisos = avisosActivos(preguntas, respuestas, subtipoId)
+  const esRecojo = servicio === 'Lavado y planchado' && subtipoId === 'recojo'
+  const fechaEntregaEstimada = esRecojo ? estimarFechaEntrega(fecha, Number(respuestas.cantidad_prendas)) : null
+  const servicioCatalogo = servicio ? buscarServicioPorNombre(servicio) : undefined
+  const detalleActual = servicioCatalogo?.subtipos?.find((s) => s.id === subtipoId)?.detalle ?? servicioCatalogo?.detalle
+  const condiciones = preguntas.length > 0 ? (detalleActual?.notas ?? []) : []
+  const preguntaMateriales = seccionServicio === 'limpieza' && pideMateriales
+
+  const conMateriales = preguntaMateriales && materiales === 'no' && opcionSinMateriales === 'trae_kit'
   const recargoMateriales = conMateriales ? RECARGO_KIT_TRABAJADORA : 0
   const tarifaEstimada = trabajadorDirecto?.tarifa_hora ?? null
   const totalEstimado =
@@ -111,6 +135,11 @@ export function Reservar() {
       return 'Esta trabajadora no está disponible en el horario elegido. Cambia el horario o envíalo como pedido abierto.'
     }
     if (!servicio) return 'Elige el servicio que necesitas.'
+    const errorPreguntas = validarRespuestas(preguntas, respuestas)
+    if (errorPreguntas) return errorPreguntas
+    if (configFotos?.obligatorias && fotosServicio.length === 0) {
+      return 'Sube al menos una foto actual del inmueble para validar el servicio.'
+    }
     if (requiereDescripcionTrabajo && !descripcionTrabajo.trim()) {
       return 'Describe el trabajo que necesitas.'
     }
@@ -121,7 +150,7 @@ export function Reservar() {
     if (!direccion.trim()) return 'Escribe la dirección donde se hará el servicio.'
     if (!zona) return 'Elige la zona.'
     if (!pagoMetodo) return 'Elige el método de pago.'
-    if (seccionServicio === 'limpieza') {
+    if (preguntaMateriales) {
       if (!materiales) return '¿Tu espacio tiene materiales de limpieza? Elige Sí o No.'
       if (materiales === 'no' && !opcionSinMateriales) return 'Elige cómo resolver los materiales de limpieza.'
       if (conMateriales && !puedeTraerKit) {
@@ -165,12 +194,42 @@ export function Reservar() {
       fotoReferenciaRuta = ruta
     }
 
+    const rutasFotos: string[] = []
+    for (const [i, archivo] of fotosServicio.entries()) {
+      const extension = archivo.name.split('.').pop() ?? 'jpg'
+      const ruta = `${perfil.id}/servicio-${Date.now()}-${i}.${extension}`
+      const { error: errorSubida } = await supabase.storage.from('documentos').upload(ruta, archivo, {
+        upsert: true,
+      })
+      if (errorSubida) {
+        setError(`No pudimos subir la foto ${i + 1} (${traducirError(errorSubida)}). Quítala o intenta de nuevo.`)
+        setEnviando(false)
+        return
+      }
+      rutasFotos.push(ruta)
+    }
+    if (rutasFotos.length > 0) fotoReferenciaRuta = rutasFotos[0]
+
+    const { publico, privado } = resumenRespuestas(preguntas, respuestas)
+    if (fechaEntregaEstimada) {
+      publico.push({ etiqueta: 'Fecha estimada de entrega', valor: fechaEntregaEstimada })
+    }
+    const detallesServicio: DetallesServicio | null =
+      publico.length > 0 || privado.length > 0 || rutasFotos.length > 0
+        ? {
+            respuestas: publico,
+            ...(privado.length > 0 ? { privado } : {}),
+            ...(rutasFotos.length > 0 ? { fotos: rutasFotos } : {}),
+          }
+        : null
+
     const payload: Record<string, unknown> = {
       cliente_id: perfil.id,
       servicio,
       subtipo_servicio: subtituloServicio,
       descripcion_trabajo: requiereDescripcionTrabajo ? descripcionTrabajo.trim() : null,
       foto_referencia_ruta: fotoReferenciaRuta,
+      detalles_servicio: detallesServicio,
       fecha,
       hora,
       horas: Number(horas),
@@ -227,9 +286,14 @@ export function Reservar() {
             onConfirmar={(r) => {
               setServicio(r.servicio)
               setSubtituloServicio(r.subtitulo)
+              setSubtipoId(r.subtipoId)
               setSeccionServicio(r.seccion)
               setRequiereDescripcionTrabajo(r.requiereDescripcionTrabajo)
-              if (r.seccion !== 'limpieza') {
+              setPideMateriales(r.pideMateriales)
+              setConfigFotos(r.fotos)
+              setFotosServicio([])
+              setRespuestas({})
+              if (r.seccion !== 'limpieza' || !r.pideMateriales) {
                 setMateriales('')
                 setOpcionSinMateriales('')
               }
@@ -244,13 +308,55 @@ export function Reservar() {
             onCambiar={() => {
               setServicio('')
               setSubtituloServicio(null)
+              setSubtipoId(null)
               setSeccionServicio(null)
               setRequiereDescripcionTrabajo(false)
+              setPideMateriales(true)
+              setConfigFotos(null)
+              setFotosServicio([])
+              setRespuestas({})
               setDescripcionTrabajo('')
               setFotoReferencia(null)
             }}
           />
         </Campo>
+
+        {servicio && preguntas.length > 0 && (
+          <div className="flex flex-col gap-4 rounded-xl border border-neutral-200 p-3">
+            {preguntas.map((p) => (
+              <PreguntaCampo
+                key={p.id}
+                pregunta={p}
+                valor={respuestas[p.id]}
+                onChange={(v) => setRespuestas((anterior) => ({ ...anterior, [p.id]: v }))}
+              />
+            ))}
+            {avisos.map((aviso) => (
+              <p key={aviso} className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                {aviso}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {configFotos && (
+          <Campo
+            etiqueta={`${configFotos.etiqueta}${configFotos.obligatorias ? '' : ' (opcional)'} — máx. ${configFotos.maximo}`}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => setFotosServicio(Array.from(e.target.files ?? []).slice(0, configFotos.maximo))}
+              className="text-sm"
+            />
+            {fotosServicio.length > 0 && (
+              <span className="text-xs text-neutral-500">
+                {fotosServicio.length === 1 ? '1 foto seleccionada' : `${fotosServicio.length} fotos seleccionadas`}
+              </span>
+            )}
+          </Campo>
+        )}
 
         {requiereDescripcionTrabajo && (
           <>
@@ -275,7 +381,7 @@ export function Reservar() {
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Campo etiqueta="Fecha">
+          <Campo etiqueta={esRecojo ? 'Fecha de recojo' : 'Fecha'}>
             <input
               required
               type="date"
@@ -285,7 +391,7 @@ export function Reservar() {
               className="input"
             />
           </Campo>
-          <Campo etiqueta="Hora">
+          <Campo etiqueta={esRecojo ? 'Hora de recojo' : 'Hora'}>
             <input required type="time" value={hora} onChange={(e) => setHora(e.target.value)} className="input" />
           </Campo>
         </div>
@@ -324,7 +430,7 @@ export function Reservar() {
           </div>
         )}
 
-        <Campo etiqueta="Dirección">
+        <Campo etiqueta={esRecojo ? 'Dirección de recojo' : 'Dirección'}>
           <input
             required
             value={direccion}
@@ -370,7 +476,7 @@ export function Reservar() {
           </div>
         )}
 
-        {seccionServicio === 'limpieza' && (
+        {preguntaMateriales && (
           <>
             <Campo etiqueta="¿Tu espacio tiene materiales de limpieza?">
               <select
@@ -426,6 +532,29 @@ export function Reservar() {
               </div>
             )}
           </>
+        )}
+
+        {condiciones.length > 0 && (
+          <div className="rounded-xl border border-neutral-200 px-4 py-3 text-sm text-neutral-700">
+            <p className="font-medium">Condiciones del servicio</p>
+            <ul className="mt-1 list-inside list-disc text-neutral-600">
+              {condiciones.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {fechaEntregaEstimada && (
+          <p className="rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-700">
+            Entrega estimada: <strong>{fechaEntregaEstimada}</strong>. Es una fecha orientativa; el tiempo real
+            depende de la cantidad de prendas y del servicio.
+          </p>
+        )}
+        {esRecojo && !fechaEntregaEstimada && Number(respuestas.cantidad_prendas) > 30 && (
+          <p className="rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-700">
+            La fecha de entrega se confirma al recoger tus prendas.
+          </p>
         )}
 
         {totalEstimado !== null && (

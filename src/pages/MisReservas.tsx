@@ -6,6 +6,7 @@ import { ESTADO_RESERVA_LABELS, whatsappUrl } from '../lib/constantes'
 import { useToasts } from '../lib/useToasts'
 import { Estrellas } from '../components/Estrellas'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
+import { DetallesServicioVista } from '../components/DetallesServicioVista'
 import type { Reserva, TrabajadorContacto } from '../types'
 
 // Se carga solo cuando hace falta (una reserva en camino), para no meter
@@ -106,6 +107,16 @@ export function MisReservas() {
     setNuevaDireccion(r.direccion)
   }
 
+  async function verFoto(ruta: string | null) {
+    if (!ruta) return
+    const { data, error: errorFoto } = await supabase.storage.from('documentos').createSignedUrl(ruta, 300)
+    if (errorFoto || !data) {
+      setError(traducirError(errorFoto ?? new Error('No se pudo abrir la foto.')))
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
+
   async function guardarDireccion(id: string) {
     if (!nuevaDireccion.trim()) return
     setGuardandoDireccion(true)
@@ -172,6 +183,7 @@ export function MisReservas() {
                 <p className="text-sm text-neutral-500">{r.zona}</p>
                 {r.subtipo_servicio && <p className="text-sm text-neutral-500">{r.subtipo_servicio}</p>}
                 {r.descripcion_trabajo && <p className="text-sm text-neutral-500">{r.descripcion_trabajo}</p>}
+                <DetallesServicioVista detalles={r.detalles_servicio} fotoLegado={r.foto_referencia_ruta} onVerFoto={verFoto} />
 
                 {editandoDireccion === r.id ? (
                   <div className="mt-1 flex flex-col gap-2">

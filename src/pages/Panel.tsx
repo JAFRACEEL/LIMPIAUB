@@ -10,6 +10,8 @@ import { tieneSuscripcionGuardada } from '../lib/push'
 import { reproducirSonidoAlerta } from '../lib/sonido'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
 import { EditarPerfilTrabajador } from '../components/EditarPerfilTrabajador'
+import { DetallesServicioVista } from '../components/DetallesServicioVista'
+import type { DetallesServicio } from '../lib/preguntasServicio'
 import { PedidoEntranteOverlay, type PedidoEntranteOverlayData } from '../components/PedidoEntranteOverlay'
 import type { PedidoAbierto, PrestamoKit, PrestamoKitMovimiento, Reserva, Trabajador } from '../types'
 
@@ -291,6 +293,7 @@ export function Panel() {
         subtipoServicio: r.subtipo_servicio,
         descripcionTrabajo: r.descripcion_trabajo,
         fotoReferenciaRuta: r.foto_referencia_ruta,
+        detallesServicio: r.detalles_servicio,
         zona: r.zona,
         fecha: r.fecha,
         hora: r.hora,
@@ -310,6 +313,7 @@ export function Panel() {
         subtipoServicio: p.subtipo_servicio,
         descripcionTrabajo: p.descripcion_trabajo,
         fotoReferenciaRuta: p.foto_referencia_ruta,
+        detallesServicio: p.detalles_servicio,
         zona: p.zona,
         fecha: p.fecha,
         hora: p.hora,
@@ -977,6 +981,7 @@ interface ConDetalleTrabajo {
   subtipo_servicio: string | null
   descripcion_trabajo: string | null
   foto_referencia_ruta: string | null
+  detalles_servicio: DetallesServicio | null
 }
 
 function DetalleTrabajo({
@@ -986,20 +991,23 @@ function DetalleTrabajo({
   reserva: ConDetalleTrabajo
   onVerFoto: (ruta: string | null) => void
 }) {
-  if (!reserva.subtipo_servicio && !reserva.descripcion_trabajo && !reserva.foto_referencia_ruta) return null
+  if (
+    !reserva.subtipo_servicio &&
+    !reserva.descripcion_trabajo &&
+    !reserva.foto_referencia_ruta &&
+    !reserva.detalles_servicio
+  ) {
+    return null
+  }
   return (
     <div className="mt-1 text-sm text-neutral-600">
       {reserva.subtipo_servicio && <p>{reserva.subtipo_servicio}</p>}
       {reserva.descripcion_trabajo && <p>{reserva.descripcion_trabajo}</p>}
-      {reserva.foto_referencia_ruta && (
-        <button
-          type="button"
-          onClick={() => onVerFoto(reserva.foto_referencia_ruta)}
-          className="mt-1 text-xs font-medium text-teal-700 underline"
-        >
-          Ver foto de referencia
-        </button>
-      )}
+      <DetallesServicioVista
+        detalles={reserva.detalles_servicio}
+        fotoLegado={reserva.foto_referencia_ruta}
+        onVerFoto={onVerFoto}
+      />
     </div>
   )
 }

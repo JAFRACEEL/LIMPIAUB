@@ -1,11 +1,59 @@
 import { useState } from 'react'
-import { CATALOGO_SERVICIOS, type DetalleServicio, type ServicioCatalogo } from '../lib/catalogoServicios'
+import {
+  CATALOGO_SERVICIOS,
+  type DetalleServicio,
+  type FotosServicio,
+  type ServicioCatalogo,
+} from '../lib/catalogoServicios'
 
-interface Resultado {
+export interface ResultadoServicio {
   servicio: string
+  /** Id de la modalidad elegida (subtipo), si el servicio las tiene. */
+  subtipoId: string | null
   subtitulo: string | null
   seccion: 'limpieza' | 'mantenimiento'
   requiereDescripcionTrabajo: boolean
+  pideMateriales: boolean
+  fotos: FotosServicio | null
+}
+
+type Resultado = ResultadoServicio
+
+function ListaDetalle({ detalle }: { detalle: DetalleServicio }) {
+  return (
+    <>
+      {detalle.incluye.length > 0 && (
+        <>
+          <p className="mt-2 text-sm font-medium text-neutral-700">¿Qué incluye?</p>
+          <ul className="mt-1 list-inside list-disc text-sm text-neutral-600">
+            {detalle.incluye.map((linea, i) => (
+              <li key={i}>{linea}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {detalle.noIncluye.length > 0 && (
+        <>
+          <p className="mt-3 text-sm font-medium text-neutral-700">¿Qué no incluye?</p>
+          <ul className="mt-1 list-inside list-disc text-sm text-neutral-600">
+            {detalle.noIncluye.map((linea, i) => (
+              <li key={i}>{linea}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {detalle.notas && detalle.notas.length > 0 && (
+        <>
+          <p className="mt-3 text-sm font-medium text-neutral-700">Notas importantes</p>
+          <ul className="mt-1 list-inside list-disc text-sm text-neutral-600">
+            {detalle.notas.map((linea, i) => (
+              <li key={i}>{linea}</li>
+            ))}
+          </ul>
+        </>
+      )}
+    </>
+  )
 }
 
 export function SelectorServicio({
@@ -20,6 +68,8 @@ export function SelectorServicio({
   const [confirmado, setConfirmado] = useState<Resultado | null>(null)
   const [servicio, setServicio] = useState<ServicioCatalogo | null>(null)
   const [subtitulo, setSubtitulo] = useState<string | null>(null)
+  const [subtipoId, setSubtipoId] = useState<string | null>(null)
+  const [verDetallesId, setVerDetallesId] = useState<string | null>(null)
   const [detalle, setDetalle] = useState<DetalleServicio | null>(null)
   const [acepta, setAcepta] = useState(false)
 
@@ -32,12 +82,15 @@ export function SelectorServicio({
   function elegirServicio(s: ServicioCatalogo) {
     setServicio(s)
     setSubtitulo(null)
+    setSubtipoId(null)
+    setVerDetallesId(null)
     setAcepta(false)
     if (!s.subtipos && !s.opciones) setDetalle(s.detalle ?? null)
     else setDetalle(null)
   }
 
-  function elegirSubtipo(nombre: string, detalleSubtipo: DetalleServicio) {
+  function elegirSubtipo(id: string, nombre: string, detalleSubtipo: DetalleServicio) {
+    setSubtipoId(id)
     setSubtitulo(nombre)
     setDetalle(detalleSubtipo)
   }
@@ -51,9 +104,12 @@ export function SelectorServicio({
     if (!servicio) return
     const resultado: Resultado = {
       servicio: servicio.nombre,
+      subtipoId,
       subtitulo,
       seccion: servicio.seccion,
       requiereDescripcionTrabajo: Boolean(servicio.requiereDescripcionTrabajo),
+      pideMateriales: servicio.pideMateriales !== false,
+      fotos: servicio.fotos ?? null,
     }
     setConfirmado(resultado)
     onConfirmar(resultado)
@@ -63,6 +119,8 @@ export function SelectorServicio({
     setConfirmado(null)
     setServicio(null)
     setSubtitulo(null)
+    setSubtipoId(null)
+    setVerDetallesId(null)
     setDetalle(null)
     setAcepta(false)
     // El padre debe olvidar el servicio ya confirmado: si no, alguien podría
@@ -85,23 +143,36 @@ export function SelectorServicio({
     )
   }
 
-  // Paso: elegir subtipo (Oficinas, Airbnb)
+  // Paso: elegir subtipo o modalidad (Oficinas, Airbnb, Post obra, Lavado)
   if (servicio?.subtipos && !subtitulo) {
     return (
       <div className="rounded-xl border border-neutral-300 p-3">
-        <p className="mb-2 text-sm font-medium text-neutral-700">
-          {servicio.nombre} — ¿qué tipo de limpieza necesitas?
+        <p className="text-sm font-semibold text-neutral-800">{servicio.nombre}</p>
+        {servicio.descripcion && <p className="mt-1 text-sm text-neutral-600">{servicio.descripcion}</p>}
+        <p className="mb-2 mt-3 text-sm font-medium text-neutral-700">
+          {servicio.preguntaSubtipo ?? `${servicio.nombre} — ¿qué tipo de limpieza necesitas?`}
         </p>
         <div className="flex flex-col gap-2">
           {servicio.subtipos.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => elegirSubtipo(s.nombre, s.detalle)}
-              className="rounded-lg border border-neutral-300 px-3 py-2 text-left text-sm hover:border-teal-600"
-            >
-              {s.nombre}
-            </button>
+            <div key={s.id} className="rounded-lg border border-neutral-300 p-2">
+              <button
+                type="button"
+                onClick={() => elegirSubtipo(s.id, s.nombre, s.detalle)}
+                className="w-full text-left text-sm hover:text-teal-700"
+              >
+                <span className="font-medium">{s.nombre}</span>
+                {s.descripcion && <span className="mt-0.5 block text-xs text-neutral-500">{s.descripcion}</span>}
+              </button>
+              <button
+                type="button"
+                onClick={() => setVerDetallesId(verDetallesId === s.id ? null : s.id)}
+                aria-expanded={verDetallesId === s.id}
+                className="mt-1 text-xs font-medium text-teal-700 underline"
+              >
+                {verDetallesId === s.id ? 'Ocultar detalles' : 'Ver detalles'}
+              </button>
+              {verDetallesId === s.id && <ListaDetalle detalle={s.detalle} />}
+            </div>
           ))}
         </div>
         <button type="button" onClick={cambiar} className="mt-2 text-xs text-neutral-500 underline">
@@ -142,38 +213,7 @@ export function SelectorServicio({
         <p className="mb-1 font-semibold">{servicio.nombre}</p>
         {subtitulo && <p className="mb-2 text-sm text-neutral-500">{subtitulo}</p>}
 
-        {detalle.incluye.length > 0 && (
-          <>
-            <p className="mt-2 text-sm font-medium text-neutral-700">¿Qué incluye?</p>
-            <ul className="mt-1 list-inside list-disc text-sm text-neutral-600">
-              {detalle.incluye.map((linea, i) => (
-                <li key={i}>{linea}</li>
-              ))}
-            </ul>
-          </>
-        )}
-
-        {detalle.noIncluye.length > 0 && (
-          <>
-            <p className="mt-3 text-sm font-medium text-neutral-700">¿Qué no incluye?</p>
-            <ul className="mt-1 list-inside list-disc text-sm text-neutral-600">
-              {detalle.noIncluye.map((linea, i) => (
-                <li key={i}>{linea}</li>
-              ))}
-            </ul>
-          </>
-        )}
-
-        {detalle.notas && detalle.notas.length > 0 && (
-          <>
-            <p className="mt-3 text-sm font-medium text-neutral-700">Notas importantes</p>
-            <ul className="mt-1 list-inside list-disc text-sm text-neutral-600">
-              {detalle.notas.map((linea, i) => (
-                <li key={i}>{linea}</li>
-              ))}
-            </ul>
-          </>
-        )}
+        <ListaDetalle detalle={detalle} />
 
         <label className="mt-4 flex items-start gap-2 text-sm text-neutral-700">
           <input

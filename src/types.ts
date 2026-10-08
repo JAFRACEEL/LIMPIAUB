@@ -1,3 +1,4 @@
+import type { DetallesServicio } from './lib/preguntasServicio'
 export type Rol = 'cliente' | 'trabajador' | 'admin'
 export type Genero = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir'
 export type Nacionalidad = 'peruana' | 'extranjera'
@@ -86,6 +87,7 @@ export interface Reserva {
   subtipo_servicio: string | null
   descripcion_trabajo: string | null
   foto_referencia_ruta: string | null
+  detalles_servicio: DetallesServicio | null
   fecha: string
   hora: string
   horas: number
@@ -133,6 +135,7 @@ export interface PedidoAbierto {
   subtipo_servicio: string | null
   descripcion_trabajo: string | null
   foto_referencia_ruta: string | null
+  detalles_servicio: DetallesServicio | null
   zona: string
   fecha: string
   hora: string
