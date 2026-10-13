@@ -1,3 +1,5 @@
+import type { ModalidadPrecio } from './modalidades'
+
 export interface DetalleServicio {
   incluye: string[]
   noIncluye: string[]
@@ -59,6 +61,15 @@ export interface ServicioCatalogo {
   /** false = no aplica la pregunta de materiales de limpieza (p. ej. lavado). */
   pideMateriales?: boolean
   requiereDescripcionTrabajo?: boolean
+  /** false = ficha aún no lista: no se ofrece contratación. Por defecto true. */
+  habilitado?: boolean
+  /**
+   * Para servicios con subtipos que el cliente no debería tener que distinguir
+   * por nombre técnico: una pregunta en lenguaje cotidiano que decide el subtipo.
+   */
+  preguntaSubtipoSimple?: { pregunta: string; opciones: { etiqueta: string; subtipoId: string; aviso?: string }[] }
+  /** Subtipo que se usa cuando el cliente no tiene que elegir (clasificación interna). */
+  subtipoPorDefecto?: string
 }
 
 const SERVICIOS_CON_LAVADO = ['Solo lavado', 'Lavado y secado', 'Lavado, secado y doblado', 'Lavado y planchado']
@@ -157,6 +168,7 @@ export const CATALOGO_SERVICIOS: ServicioCatalogo[] = [
     id: 'oficinas_comercios',
     nombre: 'Limpieza de oficinas y comercios',
     seccion: 'limpieza',
+    subtipoPorDefecto: 'rutinaria',
     subtipos: [
       {
         id: 'rutinaria',
@@ -213,6 +225,7 @@ export const CATALOGO_SERVICIOS: ServicioCatalogo[] = [
     id: 'alojamientos_airbnb',
     nombre: 'Limpieza de alojamientos y Airbnb',
     seccion: 'limpieza',
+    subtipoPorDefecto: 'rutinaria',
     subtipos: [
       {
         id: 'rutinaria',
@@ -293,6 +306,18 @@ export const CATALOGO_SERVICIOS: ServicioCatalogo[] = [
     id: 'postobra',
     nombre: 'Limpieza post obra',
     seccion: 'limpieza',
+    preguntaSubtipoSimple: {
+      pregunta: '¿Todavía quedan escombros o residuos pesados?',
+      opciones: [
+        { etiqueta: 'Sí, todavía hay escombros o residuos pesados', subtipoId: 'pesada' },
+        { etiqueta: 'No, solo queda polvo y suciedad de obra', subtipoId: 'fina' },
+        {
+          etiqueta: 'No estoy seguro/a',
+          subtipoId: 'pesada',
+          aviso: 'Sube fotos del inmueble para que validemos qué tipo de limpieza necesitas.',
+        },
+      ],
+    },
     descripcion:
       'Servicio especializado para inmuebles que han pasado por una construcción, remodelación, ampliación o trabajos de obra.',
     preguntaSubtipo: 'Elige la modalidad que necesitas',
@@ -445,6 +470,13 @@ export const CATALOGO_SERVICIOS: ServicioCatalogo[] = [
     nombre: 'Lavado y planchado',
     seccion: 'limpieza',
     pideMateriales: false,
+    preguntaSubtipoSimple: {
+      pregunta: '¿Cómo prefieres el servicio?',
+      opciones: [
+        { etiqueta: 'Que vayan a mi casa a lavar o planchar', subtipoId: 'domicilio' },
+        { etiqueta: 'Que recojan mi ropa y me la entreguen', subtipoId: 'recojo' },
+      ],
+    },
     preguntaSubtipo: '¿Cómo desea recibir el servicio?',
     subtipos: [
       {
@@ -671,6 +703,59 @@ export const CATALOGO_SERVICIOS: ServicioCatalogo[] = [
       noIncluye: [],
       notas: ['Los trabajos de mayor complejidad deberán ser evaluados previamente y podrán requerir una cotización independiente.'],
     },
+    preguntas: [
+      {
+        id: 'riesgo_electrico',
+        etiqueta: '¿Notas chispas, olor a quemado o calor en el tablero o en el punto afectado?',
+        tipo: 'opcion',
+        opciones: ['No', 'Sí'],
+        aviso: (valor) =>
+          valor === 'Sí'
+            ? 'Por seguridad, no uses ese punto y, si puedes, baja la llave del tablero hasta que llegue el profesional.'
+            : null,
+      },
+    ],
+  },
+  {
+    // FICHA PROVISIONAL: el alcance está redactado sin técnicos reales todavía. Revisarlo con quienes se
+    // inscriban antes de abrir este servicio. Mientras no haya profesionales registrados no se ofrece
+    // para contratar (ver disponibilidad.ts y la vista v_cobertura_servicios).
+    id: 'aire_acondicionado',
+    nombre: 'Aire acondicionado',
+    seccion: 'mantenimiento',
+    requiereDescripcionTrabajo: true,
+    detalle: {
+      incluye: [
+        'Limpieza y mantenimiento de equipos tipo split o de ventana de uso doméstico.',
+        'Revisión del funcionamiento del equipo.',
+        'Evaluación de fallas (por ejemplo, si no enfría, gotea o hace ruido).',
+        'Instalación o cambio de ubicación de equipos tipo split, según evaluación.',
+      ],
+      noIncluye: [
+        'Repuestos, gas refrigerante y materiales, salvo que el profesional los incluya expresamente en su propuesta.',
+        'Equipos industriales, centrales o sistemas de gran tamaño.',
+        'Trabajos eléctricos o de albañilería necesarios para instalar el equipo, salvo que se indique.',
+      ],
+      notas: [
+        'El alcance y el precio final los define el profesional según el estado del equipo. Cualquier cambio necesita tu aprobación antes de realizarse.',
+      ],
+    },
+    preguntas: [
+      {
+        id: 'tipo_aire',
+        etiqueta: '¿Qué necesitas con tu aire acondicionado?',
+        tipo: 'opcion',
+        obligatoria: true,
+        opciones: ['Limpieza o mantenimiento', 'No enfría o tiene una falla', 'Instalación o cambio de lugar', 'Otra cosa'],
+      },
+      {
+        id: 'cantidad_equipos',
+        etiqueta: '¿Cuántos equipos son?',
+        tipo: 'cantidad',
+        obligatoria: true,
+        placeholder: 'Ej. 1',
+      },
+    ],
   },
   {
     id: 'gasfiteria',
@@ -776,17 +861,26 @@ export const CATALOGO_SERVICIOS: ServicioCatalogo[] = [
     nombre: 'Mantenimiento y reparaciones generales',
     seccion: 'mantenimiento',
     requiereDescripcionTrabajo: true,
+    descripcion:
+      'Para arreglos pequeños de la casa que no son de un oficio. Si es de electricidad, gasfitería u otro oficio, pídelo en ese servicio.',
     detalle: {
       incluye: [
-        'Ajustes domésticos.',
-        'Instalaciones sencillas.',
-        'Fijación de accesorios.',
-        'Pequeñas reparaciones.',
-        'Otros trabajos menores que no requieran una especialidad técnica específica.',
+        'Colgar cuadros, espejos livianos o cortinas.',
+        'Instalar accesorios livianos: percheros, ganchos, toalleros.',
+        'Ajustes domésticos menores: tornillos, topes, fijaciones.',
+        'Pequeños arreglos que no requieran un oficio específico.',
       ],
-      noIncluye: [],
+      noIncluye: [
+        'Electricidad: enchufes, interruptores, focos, cableado.',
+        'Gasfitería: grifos, fugas, desagües, inodoros, tuberías.',
+        'Aire acondicionado.',
+        'Cerrajería: cerraduras, chapas, candados.',
+        'Pintura y trabajos de albañilería (mayólicas, resanes, cemento).',
+        'Carpintería (puertas, roperos, muebles, repisas) y vidriería o aluminio.',
+        'Trabajos en altura o que representen riesgo.',
+      ],
       notas: [
-        'Si el trabajo corresponde claramente a electricidad, gasfitería, pintura, albañilería, carpintería, cerrajería o vidriería y aluminio, deberá solicitarse dentro de la especialidad correspondiente.',
+        'Este servicio se cobra por horas. Los oficios de arriba no se pueden pedir aquí ni por horas: tienen su propio servicio y su propia forma de cobro.',
       ],
     },
   },
@@ -801,3 +895,49 @@ export function buscarServicioPorNombre(nombre: string): ServicioCatalogo | unde
 }
 
 export const NOMBRES_SERVICIOS = CATALOGO_SERVICIOS.map((s) => s.nombre)
+
+/**
+ * Formas de cobro que admite cada servicio (se filtran por las que hoy son operativas, ver modalidades.ts).
+ *
+ * "horas" solo figura donde cobrar por tiempo tiene sentido (limpieza, lavado, organización,
+ * reparaciones generales). En oficios como electricidad, gasfitería o aire acondicionado el cobro es por
+ * diagnóstico o precio fijo: mientras eso no esté operativo NO se sustituye por horas.
+ *
+ * El servidor tiene su propia copia (tabla servicio_modalidades de la migración 0015); una prueba
+ * (catalogoServicios.test.ts) verifica que ambas coincidan.
+ */
+export const MODALIDADES_POR_SERVICIO: Record<string, ModalidadPrecio[]> = {
+  limpieza_basica: ['horas', 'cotizacion'],
+  limpieza_profunda_reorganizacion: ['horas', 'cotizacion'],
+  oficinas_comercios: ['horas', 'cotizacion'],
+  alojamientos_airbnb: ['horas', 'cotizacion'],
+  postevento: ['horas', 'cotizacion'],
+  postobra: ['horas', 'cotizacion'],
+  organizacion_espacios: ['horas', 'cotizacion'],
+  lavado_planchado: ['horas'],
+  electricidad: ['diagnostico', 'fijo'],
+  gasfiteria: ['diagnostico', 'fijo'],
+  aire_acondicionado: ['diagnostico', 'fijo'],
+  pintura: ['cotizacion', 'diagnostico'],
+  albanileria: ['diagnostico', 'cotizacion'],
+  carpinteria: ['cotizacion', 'diagnostico'],
+  cerrajeria: ['fijo', 'diagnostico'],
+  vidrieria_aluminio: ['cotizacion', 'diagnostico'],
+  mantenimiento_general: ['horas', 'fijo'],
+}
+
+export function modalidadesDeServicio(id: string): ModalidadPrecio[] {
+  return MODALIDADES_POR_SERVICIO[id] ?? ['horas']
+}
+
+/** Accesos principales del inicio. "limpieza" agrupa las 8 clasificaciones internas de limpieza. */
+export const ACCESOS_PRINCIPALES = [
+  { id: 'limpieza', etiqueta: 'Limpieza', icono: '🧹', servicioId: 'limpieza_basica' },
+  { id: 'aire_acondicionado', etiqueta: 'Aire acondicionado', icono: '❄️', servicioId: 'aire_acondicionado' },
+  { id: 'gasfiteria', etiqueta: 'Gasfitería', icono: '🚰', servicioId: 'gasfiteria' },
+  { id: 'electricidad', etiqueta: 'Electricidad', icono: '💡', servicioId: 'electricidad' },
+] as const
+
+export function servicioPorId(id: string): ServicioCatalogo | undefined {
+  return CATALOGO_SERVICIOS.find((s) => s.id === id)
+}

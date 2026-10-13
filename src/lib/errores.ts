@@ -1,6 +1,11 @@
 // Traduce los mensajes de error más comunes de Supabase al español.
 export function traducirError(error: unknown): string {
-  const mensaje = error instanceof Error ? error.message : String(error)
+  const mensaje =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : String(error)
 
   const mapa: Record<string, string> = {
     'Invalid login credentials': 'Correo o contraseña incorrectos.',
@@ -12,6 +17,8 @@ export function traducirError(error: unknown): string {
     'duplicate key value violates unique constraint': 'Ese dato ya está registrado.',
     'new row violates row-level security policy': 'No tienes permiso para hacer esta acción.',
     'Failed to fetch': 'No se pudo conectar con el servidor. Revisa tu internet.',
+    'permission denied': 'No tienes permiso para hacer esta acción.',
+    'violates check constraint': 'Revisa los datos: alguno no es válido.',
   }
 
   for (const clave in mapa) {

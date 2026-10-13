@@ -1,10 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
+import { volverSeguro } from '../lib/rutas'
 
 export function Login() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const volver = volverSeguro(params.get('volver'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -20,13 +23,15 @@ export function Login() {
       setError(traducirError(error))
       return
     }
-    navigate('/')
+    navigate(volver ?? '/')
   }
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-57px)] max-w-lg flex-col justify-center px-4 py-8">
       <h1 className="mb-1 text-2xl font-bold">Inicia sesión</h1>
-      <p className="mb-6 text-neutral-500">Entra a tu cuenta de Limpi.</p>
+      <p className="mb-6 text-neutral-500">
+        {volver === '/pedir' ? 'Entra para enviar tu pedido. Guardamos lo que escribiste.' : 'Entra a tu cuenta de Limpi.'}
+      </p>
 
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1">
@@ -74,7 +79,7 @@ export function Login() {
 
       <p className="mt-6 text-center text-sm text-neutral-500">
         ¿No tienes cuenta?{' '}
-        <Link to="/registro" className="font-semibold text-teal-700">
+        <Link to={volver ? `/registro?volver=${encodeURIComponent(volver)}` : '/registro'} className="font-semibold text-teal-700">
           Regístrate
         </Link>
       </p>

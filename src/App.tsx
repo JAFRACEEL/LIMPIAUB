@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Navbar } from './components/Navbar'
+import { BarraInferior } from './components/BarraInferior'
 import { RutaProtegida } from './components/RutaProtegida'
 import { useAuth } from './context/AuthContext'
 import { destinoPorRol } from './lib/rutas'
@@ -13,17 +14,24 @@ import { Buscar } from './pages/Buscar'
 import { Panel } from './pages/Panel'
 import { Admin } from './pages/Admin'
 import { PerfilTrabajador } from './pages/PerfilTrabajador'
-import { Reservar } from './pages/Reservar'
+import { Inicio } from './pages/Inicio'
+import { Pedir } from './pages/Pedir'
 import { MisReservas } from './pages/MisReservas'
+import { Cuenta } from './pages/Cuenta'
 import { ActivarNotificaciones } from './pages/ActivarNotificaciones'
 
-function Inicio() {
+/**
+ * "/" es el inicio del cliente (también para quien aún no tiene cuenta: se puede
+ * explorar y armar un pedido). Profesionales y admin siguen yendo a su panel.
+ */
+function Raiz() {
   const { cargando, session, perfil } = useAuth()
   if (cargando) return <div className="p-6 text-center text-neutral-500">Cargando…</div>
-  if (!session) return <Navigate to="/login" replace />
+  if (!session) return <Inicio />
   // Hay sesión pero no encontramos tu fila en `perfiles`: mandarte al lado
   // cliente por defecto aquí sería confuso (pareces cliente sin serlo).
   if (!perfil) return <PerfilNoEncontrado />
+  if (perfil.rol === 'cliente') return <Inicio />
   if (!notifYaDecidido(session.user.id)) return <Navigate to="/activar-notificaciones" replace />
   return <Navigate to={destinoPorRol(perfil)} replace />
 }
@@ -40,8 +48,16 @@ function PerfilNoEncontrado() {
   )
 }
 
+/** /reservar quedó reemplazado por /pedir (se conserva el profesional elegido, si lo hay). */
+function RedirigirReservar() {
+  const { search } = useLocation()
+  return <Navigate to={`/pedir${search}`} replace />
+}
+
 function App() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const { session, perfil } = useAuth()
 
   // Al tocar una notificación push con la app ya abierta en otra pestaña,
   // el service worker enfoca esa pestaña y nos manda a dónde navegar (una
@@ -55,15 +71,21 @@ function App() {
     return () => navigator.serviceWorker.removeEventListener('message', onMensaje)
   }, [navigate])
 
+  // Barra inferior del cliente (no en el pedido, que tiene su propio botón principal).
+  const enPedido = pathname.startsWith('/pedir')
+  const mostrarBarra = !!session && perfil?.rol === 'cliente' && !enPedido && !['/login', '/registro'].includes(pathname)
+
   return (
-    <div className="min-h-dvh">
+    <div className={`min-h-dvh ${mostrarBarra ? 'pb-20' : ''}`}>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Inicio />} />
+        <Route path="/" element={<Raiz />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
         <Route path="/recuperar" element={<RecuperarContrasena />} />
         <Route path="/restablecer" element={<RestablecerContrasena />} />
+        <Route path="/pedir" element={<Pedir />} />
+        <Route path="/reservar" element={<RedirigirReservar />} />
         <Route
           path="/buscar"
           element={
@@ -81,18 +103,18 @@ function App() {
           }
         />
         <Route
-          path="/reservar"
-          element={
-            <RutaProtegida rolRequerido="cliente">
-              <Reservar />
-            </RutaProtegida>
-          }
-        />
-        <Route
           path="/reservas"
           element={
             <RutaProtegida rolRequerido="cliente">
               <MisReservas />
+            </RutaProtegida>
+          }
+        />
+        <Route
+          path="/cuenta"
+          element={
+            <RutaProtegida rolRequerido="cliente">
+              <Cuenta />
             </RutaProtegida>
           }
         />
@@ -122,6 +144,7 @@ function App() {
         />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      {mostrarBarra && <BarraInferior />}
     </div>
   )
 }

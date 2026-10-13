@@ -63,7 +63,7 @@ export function etiquetaGenero(valor: string): string {
 }
 
 export const ESTADO_RESERVA_LABELS: Record<string, string> = {
-  solicitada: 'Buscando trabajadora',
+  solicitada: 'Buscando profesional',
   aceptada: 'Confirmada',
   en_camino: 'En camino',
   en_curso: 'En curso',

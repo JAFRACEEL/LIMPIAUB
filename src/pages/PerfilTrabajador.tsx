@@ -56,7 +56,7 @@ export function PerfilTrabajador() {
     return (
       <div className="mx-auto max-w-lg px-4 py-6">
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error ?? 'No encontramos a esta trabajadora, o ya no está disponible.'}
+          {error ?? 'No encontramos a este profesional, o ya no está disponible.'}
         </p>
         <Link to="/buscar" className="mt-4 inline-block text-sm font-semibold text-teal-700">
           Volver a buscar
@@ -99,10 +99,10 @@ export function PerfilTrabajador() {
       </div>
 
       <Link
-        to={`/reservar?trabajador=${trabajador.id}`}
+        to={`/pedir?trabajador=${trabajador.id}`}
         className="mt-6 block rounded-xl bg-teal-700 px-4 py-3 text-center font-semibold text-white"
       >
-        Reservar con {trabajador.nombre.split(' ')[0]}
+        Pedir a {trabajador.nombre.split(' ')[0]}
       </Link>
 
       <h2 className="mb-3 mt-8 text-lg font-semibold">Últimas calificaciones</h2>

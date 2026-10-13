@@ -9,6 +9,7 @@ import {
 } from '../lib/constantes'
 import { calcularComision } from '../lib/calculos'
 import { KitCredito } from '../components/KitCredito'
+import { PagosPendientesAdmin } from '../components/PagosPendientesAdmin'
 import type { Trabajador } from '../types'
 
 interface PerfilResumen {
@@ -288,6 +289,8 @@ export function Admin() {
       )}
 
       <TableroEnVivo tablero={tablero} />
+
+      <PagosPendientesAdmin />
 
       <h2 className="mb-3 text-lg font-semibold">Pendientes de revisión</h2>
 

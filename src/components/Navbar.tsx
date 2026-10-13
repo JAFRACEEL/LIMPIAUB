@@ -1,15 +1,20 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { borrarBorrador } from '../lib/borrador'
 
+/** Barra superior. El cliente navega con la barra inferior (Inicio, Mis servicios, Cuenta); aquí solo va la marca. */
 export function Navbar() {
   const { session, perfil } = useAuth()
   const navigate = useNavigate()
 
   async function salir() {
+    borrarBorrador()
     await supabase.auth.signOut()
     navigate('/login')
   }
+
+  const esCliente = perfil?.rol === 'cliente'
 
   return (
     <header className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 backdrop-blur">
@@ -17,18 +22,15 @@ export function Navbar() {
         <Link to="/" className="text-lg font-bold text-teal-700">
           Limpi
         </Link>
-        {session && (
+        {!session && (
           <div className="flex items-center gap-3 text-sm">
-            {perfil?.rol === 'cliente' && (
-              <>
-                <Link to="/buscar" className="text-neutral-600">
-                  Buscar
-                </Link>
-                <Link to="/reservas" className="text-neutral-600">
-                  Mis reservas
-                </Link>
-              </>
-            )}
+            <Link to="/login" className="font-semibold text-teal-700">
+              Ingresar
+            </Link>
+          </div>
+        )}
+        {session && !esCliente && (
+          <div className="flex items-center gap-3 text-sm">
             {perfil?.rol === 'trabajador' && (
               <Link to="/panel" className="text-neutral-600">
                 Mi panel

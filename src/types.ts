@@ -1,4 +1,5 @@
 import type { DetallesServicio } from './lib/preguntasServicio'
+import type { ModalidadPrecio } from './lib/modalidades'
 export type Rol = 'cliente' | 'trabajador' | 'admin'
 export type Genero = 'femenino' | 'masculino' | 'otro' | 'prefiero_no_decir'
 export type Nacionalidad = 'peruana' | 'extranjera'
@@ -77,7 +78,7 @@ export type EstadoReserva =
   | 'cancelada'
   | 'rechazada'
 export type ModoReserva = 'abierto' | 'directo'
-export type MetodoPago = 'yape' | 'plin' | 'efectivo'
+export type MetodoPago = 'yape' | 'plin' | 'transferencia' | 'efectivo'
 
 export interface Reserva {
   id: string
@@ -115,6 +116,58 @@ export interface Reserva {
   zona_ampliada: boolean
   con_materiales: boolean
   recargo_materiales: number
+  modalidad_precio: ModalidadPrecio
+  personas: number
+  cantidad: number
+  programacion: 'ahora' | 'programada'
+  necesidad: { texto_original?: string; servicio_id?: string } | null
+  /** Todo lo que paga el cliente; `total` es mano de obra + kit (base de la comisión). */
+  total_cliente: number | null
+}
+
+export type TipoPropuesta = 'servicio' | 'presupuesto_reparacion' | 'adicional'
+export type EstadoPropuesta = 'ofrecida' | 'aceptada' | 'rechazada' | 'reemplazada' | 'vencida'
+
+export interface Propuesta {
+  id: string
+  reserva_id: string
+  trabajador_id: string
+  tipo: TipoPropuesta
+  modalidad: ModalidadPrecio
+  version: number
+  estado: EstadoPropuesta
+  tarifa_hora: number | null
+  horas: number | null
+  personas: number | null
+  cantidad: number | null
+  mano_obra: number
+  materiales: number
+  movilidad: number
+  otros: number
+  descuento_visita: number
+  total_propuesta: number
+  alcance: string | null
+  incluye: string[]
+  no_incluye: string[]
+  condiciones: string[]
+  vigente_hasta: string | null
+  creado_en: string
+  respondido_en: string | null
+}
+
+export type EstadoPago = 'pendiente_verificacion' | 'confirmado' | 'rechazado'
+
+export interface Pago {
+  id: string
+  reserva_id: string
+  metodo: MetodoPago
+  monto: number
+  estado: EstadoPago
+  referencia: string | null
+  evidencia_ruta: string | null
+  motivo_rechazo: string | null
+  creado_en: string
+  verificado_en: string | null
 }
 
 export interface Candidatura {
@@ -146,6 +199,9 @@ export interface PedidoAbierto {
   ventana_cierra_en: string | null
   zona_ampliada: boolean
   creado_en: string
+  personas?: number
+  modalidad_precio?: ModalidadPrecio
+  programacion?: 'ahora' | 'programada'
 }
 
 export interface TrabajadorContacto {

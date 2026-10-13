@@ -21,3 +21,8 @@ npm-debug.log*
 .env*
 
 supabase/.temp
+
+# Pruebas y temporales (no van al repositorio)
+.supabase-test/
+.playwright-mcp/
+capturas/

@@ -74,8 +74,11 @@ export function Panel() {
     setReservasPropias((data as Reserva[]) ?? [])
   }, [session])
 
-  const cargarPedidosAbiertos = useCallback(async (disponible: boolean, habilitado: boolean) => {
-    if (!disponible || !habilitado) {
+  // La vista v_pedidos_abiertos ya decide qué ve cada profesional: los pedidos "ahora" exigen estar
+  // disponible ahora; los programados se ven aunque el interruptor esté apagado (siempre con los
+  // filtros de especialidad, zona, habilitación y solapamiento). Por eso aquí solo se exige estar habilitado.
+  const cargarPedidosAbiertos = useCallback(async (habilitado: boolean) => {
+    if (!habilitado) {
       setPedidosAbiertos([])
       return
     }
@@ -174,7 +177,7 @@ export function Panel() {
     const t = await cargarTrabajador()
     await Promise.all([
       cargarReservasPropias(),
-      cargarPedidosAbiertos(t?.disponible_ahora ?? false, t?.habilitado_trabajar ?? false),
+      cargarPedidosAbiertos(t?.habilitado_trabajar ?? false),
       cargarCalificadas(),
       cargarPostulaciones(),
       cargarGanancias(),
@@ -236,7 +239,7 @@ export function Panel() {
     // vista), así que en su lugar sondeamos esa vista cada 20s.
     const intervaloAbiertos = window.setInterval(() => {
       const actual = trabajadorRef.current
-      if (actual) cargarPedidosAbiertos(actual.disponible_ahora, actual.habilitado_trabajar)
+      if (actual) cargarPedidosAbiertos(actual.habilitado_trabajar)
     }, 20000)
 
     const canalCandidaturas = supabase
@@ -282,7 +285,7 @@ export function Panel() {
     )
     for (const r of reservasPropias) {
       if (r.modo !== 'directo' || r.estado !== 'solicitada') continue
-      const subtotal = (r.tarifa_hora ?? trabajador.tarifa_hora) * r.horas
+      const subtotal = (r.tarifa_hora ?? trabajador.tarifa_hora) * r.horas * (r.personas ?? 1)
       const seCruza = enCursoActual.some(
         (otra) => otra.id !== r.id && seSolapan(r.fecha, r.hora, r.horas, otra.fecha, otra.hora, otra.horas, MARGEN_TRASLADO_MINUTOS),
       )
@@ -320,7 +323,7 @@ export function Panel() {
         horas: p.horas,
         conMateriales: p.con_materiales,
         ventanaCierraEn: p.ventana_cierra_en,
-        pagoNeto: calcularComision(trabajador.tarifa_hora * p.horas, p.comision_pct, p.recargo_materiales)
+        pagoNeto: calcularComision(trabajador.tarifa_hora * p.horas * (p.personas ?? 1), p.comision_pct, p.recargo_materiales)
           .netoTrabajadora,
       })
     }
@@ -407,7 +410,7 @@ export function Panel() {
     } else {
       const actualizado = { ...trabajador, disponible_ahora: nuevoValor }
       setTrabajador(actualizado)
-      cargarPedidosAbiertos(actualizado.disponible_ahora, actualizado.habilitado_trabajar)
+      cargarPedidosAbiertos(actualizado.habilitado_trabajar)
     }
     setActualizando(false)
   }

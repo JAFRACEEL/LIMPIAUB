@@ -42,7 +42,9 @@ export function validarRespuestas(preguntas: PreguntaServicio[], respuestas: Res
     if (p.obligatoria && vacia(valor)) return `Responde: ${p.etiqueta}`
     if (p.tipo === 'cantidad' && !vacia(valor)) {
       const n = Number(valor)
-      if (!Number.isInteger(n) || n < 1) return 'La cantidad de prendas debe ser un número entero mayor a 0.'
+      if (!Number.isInteger(n) || n < 1) {
+        return p.id === 'cantidad_prendas' ? 'La cantidad de prendas debe ser un número entero mayor a 0.' : 'La cantidad debe ser un número entero mayor a 0.'
+      }
     }
     if (p.id === 'contacto_recojo' && !vacia(valor) && !esCelularValido(String(valor))) {
       return 'El número de contacto debe ser un celular de 9 dígitos que empiece con 9.'

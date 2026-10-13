@@ -48,12 +48,12 @@ export function Buscar() {
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Buscar trabajadoras</h1>
+        <h1 className="text-2xl font-bold">Profesionales</h1>
         <Link
-          to="/reservar"
+          to="/pedir"
           className="shrink-0 rounded-xl bg-teal-700 px-3 py-2 text-sm font-semibold text-white"
         >
-          Pedir limpieza
+          Pedir un servicio
         </Link>
       </div>
 
@@ -104,8 +104,8 @@ export function Buscar() {
       ) : trabajadores.length === 0 ? (
         <p className="rounded-xl bg-neutral-100 px-4 py-6 text-center text-sm text-neutral-500">
           {zona
-            ? `Aún no hay trabajadoras en ${zona}. Prueba con Iquitos u otra zona.`
-            : 'Aún no hay trabajadoras disponibles con esos filtros.'}
+            ? `Aún no hay profesionales en ${zona}. Prueba con Iquitos u otra zona.`
+            : 'Aún no hay profesionales disponibles con esos filtros.'}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">

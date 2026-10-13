@@ -1,7 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
+import { volverSeguro } from '../lib/rutas'
 import {
   ZONAS,
   MAX_ZONAS_TRABAJADOR,
@@ -35,6 +36,8 @@ async function subirArchivo(
 
 export function Registro() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const volver = volverSeguro(params.get('volver'))
   const [rol, setRol] = useState<Rol>('cliente')
 
   const [email, setEmail] = useState('')
@@ -218,7 +221,7 @@ export function Registro() {
       setEnviando(false)
       setError(null)
       alert('Te enviamos un correo de confirmación. Confírmalo y vuelve a iniciar sesión para terminar tu registro.')
-      navigate('/login')
+      navigate(volver ? `/login?volver=${encodeURIComponent(volver)}` : '/login')
       return
     }
 
@@ -296,7 +299,8 @@ export function Registro() {
     setEnviando(false)
     // Pasa por "/" para que el paso de activar notificaciones (Inicio en
     // App.tsx) se interponga antes de llegar a su panel/búsqueda.
-    navigate('/')
+    // Un cliente que venía armando un pedido vuelve a él; el resto pasa por "/" (activar notificaciones).
+    navigate(rol === 'cliente' && volver ? volver : '/')
   }
 
   return (
