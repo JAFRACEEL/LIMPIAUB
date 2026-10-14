@@ -8,7 +8,8 @@ import fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 const dir = fileURLToPath(new URL('..', import.meta.url))
 
-export async function crearBase({ hasta = 14, incluir0015 = false } = {}) {
+/** Motor vacío con los esquemas, roles y funciones mínimas que Supabase da por hechos. */
+export async function nuevoMotor() {
   const db = new PGlite()
   await db.exec(`
     create role anon nologin; create role authenticated nologin; create role service_role nologin;
@@ -27,6 +28,16 @@ export async function crearBase({ hasta = 14, incluir0015 = false } = {}) {
     grant usage on schema auth, storage, net to anon, authenticated;
     grant execute on all functions in schema auth to anon, authenticated;
   `)
+  return db
+}
+
+/** Lee un .sql quitando las extensiones (PGlite no las trae; Supabase sí). */
+export function leerSql(archivo) {
+  return fs.readFileSync(archivo, 'utf8').replace(/create extension if not exists [^;]*;/gi, '')
+}
+
+export async function crearBase({ hasta = 14, incluir0015 = false } = {}) {
+  const db = await nuevoMotor()
   const aplicar = async (f) => {
     const sql = fs.readFileSync(f, 'utf8').replace(/create extension if not exists [^;]*;/gi, '')
     try { await db.exec(sql) } catch (e) { console.error('FALLÓ', f, '\n', e.message); throw e }

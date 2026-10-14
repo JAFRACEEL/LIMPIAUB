@@ -296,7 +296,7 @@ export function MisReservas() {
         {r.estado === 'solicitada' && r.modo === 'directo' && (
           <p className="mt-3 rounded-lg bg-neutral-100 px-3 py-2 text-sm text-neutral-600">
             {r.ventana_cierra_en && new Date(r.ventana_cierra_en).getTime() < Date.now()
-              ? 'El profesional no respondió a tiempo. Puedes cancelar y pedirlo de nuevo, o enviarlo a otros profesionales.'
+              ? 'El profesional no respondió a tiempo. Puedes cancelar este pedido y pedirlo de nuevo, a él o a otros profesionales.'
               : 'Esperando la respuesta del profesional (tiene 15 minutos).'}{' '}
             {r.ventana_cierra_en && new Date(r.ventana_cierra_en).getTime() < Date.now() && (
               <Link to="/pedir" className="font-semibold text-teal-700 underline">

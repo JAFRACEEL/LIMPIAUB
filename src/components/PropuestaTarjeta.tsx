@@ -27,12 +27,15 @@ export function PropuestaTarjeta({
   propuesta,
   nombre,
   contratar = false,
+  kit = 0,
   onResuelta,
 }: {
   propuesta: Propuesta
   nombre?: string
   /** true = propuesta inicial del servicio ("Contratar por S/ …"); false = presupuesto o adicional ("Aceptar"). */
   contratar?: boolean
+  /** Kit de limpieza de la reserva (S/18 si se pidió): se suma al contratar el servicio, no a presupuestos ni adicionales. */
+  kit?: number
   onResuelta: () => void
 }) {
   const [confirmando, setConfirmando] = useState(false)
@@ -45,6 +48,7 @@ export function PropuestaTarjeta({
     materiales: propuesta.materiales,
     movilidad: propuesta.movilidad,
     otros: propuesta.otros,
+    kit: propuesta.tipo === 'servicio' ? kit : 0,
   })
   const esVisita = propuesta.tipo === 'servicio' && propuesta.modalidad === 'diagnostico'
 

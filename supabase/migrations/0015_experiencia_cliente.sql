@@ -302,7 +302,22 @@ begin
        or new.con_materiales is distinct from old.con_materiales
        or new.recargo_materiales is distinct from old.recargo_materiales
        or new.trabajador_id is distinct from old.trabajador_id
-       or new.necesidad is distinct from old.necesidad then
+       or new.necesidad is distinct from old.necesidad
+       -- Lo que define QUÉ se contrató y CUÁNDO: las validaciones de modalidad y de oficio corren al
+       -- insertar, así que cambiarlo después sería saltárselas. (reintentar_solicitud lo cambia con
+       -- permisos del servidor.)
+       or new.servicio is distinct from old.servicio
+       or new.subtipo_servicio is distinct from old.subtipo_servicio
+       or new.descripcion_trabajo is distinct from old.descripcion_trabajo
+       or new.horas is distinct from old.horas
+       or new.fecha is distinct from old.fecha
+       or new.hora is distinct from old.hora
+       or new.zona is distinct from old.zona
+       or new.modo is distinct from old.modo
+       or new.programacion is distinct from old.programacion
+       or new.ventana_cierra_en is distinct from old.ventana_cierra_en
+       or new.zona_ampliada is distinct from old.zona_ampliada
+       or new.elegir_por_mi is distinct from old.elegir_por_mi then
       raise exception 'Ese dato lo calcula Limpi y no se puede cambiar desde la app';
     end if;
   end if;
@@ -339,6 +354,7 @@ create or replace function fn_preparar_reserva_nueva() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
   v_t trabajadores%rowtype;
+  v_lima timestamp;
 begin
   if coalesce(auth.role(), '') in ('authenticated','anon') and coalesce(mi_rol() = 'admin', false) is not true then
     new.estado := 'solicitada';
@@ -357,6 +373,16 @@ begin
     new.ubicacion_actualizada_en := null;
     -- Kit de limpieza: S/18 (S/13 profesional + S/5 Limpi), solo si se pidió.
     new.recargo_materiales := case when new.con_materiales then 18 else 0 end;
+
+    -- "Lo antes posible": la hora la fija el servidor (ahora + 30 min, redondeado a 5 min, hora de Lima).
+    -- "Programada": tiene que faltar al menos ~30 min (25 de tolerancia por la demora de la red).
+    if new.programacion = 'ahora' then
+      v_lima := to_timestamp(ceil(extract(epoch from (now() + interval '30 minutes')) / 300) * 300) at time zone 'America/Lima';
+      new.fecha := v_lima::date;
+      new.hora := v_lima::time;
+    elsif (new.fecha + new.hora) < ((now() at time zone 'America/Lima') + interval '25 minutes') then
+      raise exception 'Elige una hora que falte al menos 30 minutos';
+    end if;
 
     -- La forma de cobro tiene que estar permitida para ese servicio y, si no es
     -- por horas, las propuestas tienen que estar activas. No se sustituye una
@@ -439,6 +465,12 @@ begin
     update reservas set total = v_mo + v_rec, total_cliente = v_todo + v_rec where id = p_reserva_id;
   end if;
 
+  -- Una reserva anterior que un admin ya marcó como pagada y no tiene filas en `pagos` conserva ese dato:
+  -- recalcular desde cero la dejaría "sin pagar".
+  if not exists (select 1 from pagos where reserva_id = p_reserva_id)
+     and (select pago_confirmado from reservas where id = p_reserva_id) then
+    return;
+  end if;
   select coalesce(total_cliente, total, 0) into v_total_cliente from reservas where id = p_reserva_id;
   select coalesce(sum(monto), 0) into v_conf from pagos where reserva_id = p_reserva_id and estado = 'confirmado';
   update reservas set pago_confirmado = (v_total_cliente > 0 and v_conf >= v_total_cliente)
@@ -510,8 +542,13 @@ begin
     v_mo := round(t.tarifa_hora * r.horas * r.personas, 2);
     v_alcance := 'Servicio por horas: ' || r.horas || ' h' ||
                  case when r.personas > 1 then ' x ' || r.personas || ' personas' else '' end || '.';
-    v_incluye := coalesce(array(select jsonb_array_elements_text(r.necesidad->'alcance'->'incluye')), '{}');
-    v_no := coalesce(array(select jsonb_array_elements_text(r.necesidad->'alcance'->'no_incluye')), '{}');
+    -- `necesidad` lo escribe el cliente: solo se aceptan arreglos, de hasta 20 líneas de 200 caracteres.
+    v_incluye := case when jsonb_typeof(r.necesidad->'alcance'->'incluye') = 'array'
+      then array(select left(x, 200) from jsonb_array_elements_text(r.necesidad->'alcance'->'incluye') as x limit 20)
+      else '{}'::text[] end;
+    v_no := case when jsonb_typeof(r.necesidad->'alcance'->'no_incluye') = 'array'
+      then array(select left(x, 200) from jsonb_array_elements_text(r.necesidad->'alcance'->'no_incluye') as x limit 20)
+      else '{}'::text[] end;
     v_cond := v_cond || array['Pagas el tiempo de trabajo contratado. Si no alcanza para terminar todo, se avanza según lo que pediste primero.'];
   else
     select * into pr from precios_profesional
@@ -957,6 +994,9 @@ begin
   end if;
   if r.estado not in ('aceptada','en_camino','en_curso','completada') then
     raise exception 'Todavía no hay un servicio confirmado para pagar';
+  end if;
+  if r.pago_confirmado and not exists (select 1 from pagos where reserva_id = r.id) then
+    raise exception 'Este servicio ya figura como pagado';
   end if;
   if p_metodo not in ('yape','plin','transferencia','efectivo') then
     raise exception 'Elige un método de pago válido';

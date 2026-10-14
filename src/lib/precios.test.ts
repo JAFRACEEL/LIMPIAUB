@@ -6,6 +6,7 @@ import {
   manoObraPorHoras,
   repartoDelDesglose,
   RECARGO_KIT,
+  totalAContratar,
 } from './precios'
 import { modalidadesDisponibles, modalidadesOperativas, servicioContratable } from './modalidades'
 
@@ -98,5 +99,18 @@ describe('modalidades operativas', () => {
     expect(servicioContratable(true, ['cotizacion'], ['horas'])).toBe(false)
     expect(servicioContratable(false, ['horas'], ['horas'])).toBe(false)
     expect(servicioContratable(undefined, undefined, ['horas'])).toBe(true)
+  })
+})
+
+describe('lo que se muestra al contratar incluye el kit (no hay sorpresa de S/18)', () => {
+  it('la propuesta de servicio suma el kit: S/60 + S/18 = S/78', () => {
+    expect(totalAContratar({ tipo: 'servicio', total_propuesta: 60 }, RECARGO_KIT)).toBe(78)
+  })
+  it('sin kit es el total de la propuesta', () => {
+    expect(totalAContratar({ tipo: 'servicio', total_propuesta: 60 }, 0)).toBe(60)
+  })
+  it('presupuestos y adicionales nunca llevan kit', () => {
+    expect(totalAContratar({ tipo: 'presupuesto_reparacion', total_propuesta: 140 }, RECARGO_KIT)).toBe(140)
+    expect(totalAContratar({ tipo: 'adicional', total_propuesta: 10 }, RECARGO_KIT)).toBe(10)
   })
 })

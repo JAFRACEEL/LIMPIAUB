@@ -176,5 +176,14 @@ from trabajadores t join perfiles p on p.id = t.id
 where t.verificado;
 
 -- ---------- Realtime ----------
-alter publication supabase_realtime add table reservas;
-alter publication supabase_realtime add table trabajadores;
+-- Con la comprobación, el archivo se puede volver a ejecutar (antes fallaba aquí con
+-- "ya es miembro de la publicación" y, al correr en una sola transacción, revertía todo).
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'reservas') then
+    alter publication supabase_realtime add table reservas;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'trabajadores') then
+    alter publication supabase_realtime add table trabajadores;
+  end if;
+end $$;

@@ -103,6 +103,15 @@ export function repartoDelDesglose(d: Desglose, comisionPct: number) {
   return calcularComision(d.baseComision, comisionPct, d.kit)
 }
 
+/**
+ * Lo que paga el cliente al contratar una propuesta de servicio: el total de la propuesta MÁS el kit de limpieza
+ * (el kit va aparte de la propuesta y el servidor lo suma al total de la reserva). Los presupuestos de reparación
+ * y los adicionales no llevan kit.
+ */
+export function totalAContratar(propuesta: { tipo: string; total_propuesta: number }, kit: number): number {
+  return redondear(propuesta.total_propuesta + (propuesta.tipo === 'servicio' ? kit : 0))
+}
+
 export function formatoSoles(n: number): string {
   return `S/ ${n.toFixed(2)}`
 }

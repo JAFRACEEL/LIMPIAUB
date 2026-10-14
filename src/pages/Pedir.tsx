@@ -41,6 +41,8 @@ export function Pedir() {
   const [disponibleDirecto, setDisponibleDirecto] = useState<boolean | null>(null)
   const [verificando, setVerificando] = useState(false)
   const arriba = useRef<HTMLDivElement>(null)
+  // Candado contra doble toque: el estado de React tarda un ciclo en deshabilitar el botón.
+  const enviandoRef = useRef(false)
   const cobertura = useCobertura()
 
   const servicioResuelto = resolverServicio(b)?.servicio ?? null
@@ -138,7 +140,8 @@ export function Pedir() {
   function continuar() {
     const problema =
       b.paso === 1
-        ? (validarDirecto(b, directo) ?? validarNecesidad(b, fotos.length))
+        ? // Sin sesión no se puede cargar al profesional elegido: eso se revisa al volver de iniciar sesión.
+          ((session ? validarDirecto(b, directo) : null) ?? validarNecesidad(b, fotos.length))
         : (validarLugarYHorario(b, new Date()) ?? problemaDeZona())
     if (problema) {
       setError(problema)
@@ -149,6 +152,7 @@ export function Pedir() {
   }
 
   async function enviar() {
+    if (enviandoRef.current) return
     if (!session || !perfil) {
       // Se pide cuenta recién ahora; el borrador queda guardado.
       guardarBorrador(b)
@@ -175,6 +179,7 @@ export function Pedir() {
       }
     }
 
+    enviandoRef.current = true
     setEnviando(true)
     setError(null)
 
@@ -186,6 +191,7 @@ export function Pedir() {
       if (errorSubida) {
         setError(`No pudimos subir la foto ${i + 1} (${traducirError(errorSubida)}). Quítala o intenta de nuevo.`)
         setEnviando(false)
+        enviandoRef.current = false
         return
       }
       rutasFotos.push(ruta)
@@ -196,11 +202,13 @@ export function Pedir() {
     if (errorInsert) {
       setError(traducirError(errorInsert))
       setEnviando(false)
+        enviandoRef.current = false
       return
     }
 
     borrarBorrador()
     setEnviando(false)
+        enviandoRef.current = false
     navigate(`/reservas?nuevo=${data.id}`)
   }
 

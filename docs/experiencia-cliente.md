@@ -52,16 +52,19 @@ Navegación del cliente: Inicio, Mis servicios (`/reservas`: la ruta se mantiene
 ## Qué prueba cada cosa (no confundirlas)
 | Tipo | Qué cubre | Qué NO demuestra |
 |---|---|---|
-| **Unitarias** (`npm test`, Vitest) | Reglas puras: interpretación, precios, pasos, borrador, disponibilidad, restricción de "Reparaciones generales", paridad catálogo ↔ migración | Nada de la base ni del navegador |
-| **Comprobaciones SQL** (`supabase/tests/migracion-0015.mjs`, Postgres real en memoria con PGlite, 0001 a 0015, reservas anteriores y nuevas, roles simulados) | Triggers, funciones, RLS, permisos, contratación, pagos, y que los triggers *invocan* el envío de avisos | PostgREST, GoTrue, JWT reales, Realtime, Storage, `pg_net` |
+| **Unitarias** (`npm test`, Vitest, 167) | Reglas puras: interpretación, precios (incluido el kit en el total a contratar), pasos, borrador, disponibilidad, restricción de "Reparaciones generales", paridad catálogo ↔ migración | Nada de la base ni del navegador |
+| **Comprobaciones SQL** (`migracion-0015.mjs`, 182) | Triggers, funciones, RLS, permisos, contratación, pagos, columnas protegidas, hora validada, y que los triggers *invocan* el envío de avisos | PostgREST, GoTrue, JWT reales, Realtime, Storage, `pg_net` |
+| **Cadena de migraciones** (`cadena.mjs`, 30) | Orden preparado para la CLI, reservas antiguas intactas, sin duplicados, idempotencia por archivo | Que la CLI de Supabase las aplique igual (no hay Docker) |
+| **`send-push` aislado** (`send-push.mjs`, 49) | Autorización, entradas inválidas, 404/410, errores del proveedor, VAPID y cifrado, con un servicio push *simulado* | Que la versión desplegada se comporte igual, ni claves VAPID aceptadas por un proveedor real, ni entrega a un celular |
 | **Capturas con red interceptada** (Playwright) | Presentación en 390 px | El recorrido completo: la red está simulada |
 | **Integración real** (`integracion-real.mjs`) | Sesiones reales, permisos y RLS por la API, migración sobre datos viejos, trigger → `pg_net` → HTTP | **Escrita, NO ejecutada** (ver `docs/pruebas-integracion.md`) |
-| **Entrega de push** | — | Nunca verificada en esta etapa: ninguna de las pruebas anteriores la demuestra |
 
-`npm i --no-save @electric-sql/pglite && node supabase/tests/migracion-0015.mjs` repite las comprobaciones SQL sin tocar ninguna base.
+`npm i --no-save @electric-sql/pglite web-push@3.6.7` y luego `node supabase/tests/migracion-0015.mjs`, `node supabase/tests/cadena.mjs` (tras `entorno-local.ps1 -SoloPreparar`) y `node supabase/tests/send-push.mjs` repiten las comprobaciones sin tocar ninguna base.
 
-## "Reparaciones generales" no es un atajo
-Se cobra por horas, así que se delimitó: solo colgar cuadros, accesorios livianos y ajustes menores. Un texto que nombre electricidad, gasfitería, cerrajería, aire acondicionado, pintura, albañilería, carpintería o vidriería se rechaza en la interfaz (lista amplia, `oficiosFueraDeGenerales`) y en el servidor (lista corta de palabras claras, `fn_oficio_en_texto`), con un botón para pedirlo en el servicio que corresponde. El servidor no entiende el texto: corta los casos obvios; una descripción deliberadamente disfrazada puede pasar y la revisa quien acepta el trabajo.
+## "Reparaciones generales": limitación conocida
+Se cobra por horas, así que se delimitó: solo colgar cuadros, accesorios livianos y ajustes menores. Un texto que nombre electricidad, gasfitería, cerrajería, aire acondicionado, pintura, albañilería, carpintería o vidriería se rechaza en la interfaz (lista amplia, `oficiosFueraDeGenerales`) y en el servidor (lista corta, `fn_oficio_en_texto`), con un botón para pedirlo en el servicio correcto.
+
+**Esto es un filtro de palabras, no una garantía.** Que el texto no contenga palabras bloqueadas **no demuestra** que el trabajo pertenezca al alcance permitido: una descripción que no nombre el oficio ("se me apagó todo en la cocina", "cambiar eso que está suelto en la pared") pasa, y una palabra bloqueada usada en otro sentido ("pintura" de un cuadro) se rechaza aunque sea un arreglo menor. El servidor no entiende el texto. La barrera real está en las personas: quien acepta el trabajo ve la descripción y puede rechazarlo, y los oficios con forma de cobro deshabilitada no se pueden contratar por ninguna otra vía. Si en la práctica se cuelan oficios, la corrección es endurecer el servicio (por ejemplo, exigir que el profesional confirme el alcance antes de aceptar), no ampliar la lista de palabras.
 
 ## Dependencias de la etapa del profesional
 - Pantalla para configurar `precios_profesional` y para enviar propuestas (`enviar_propuesta`); leer `v_pedidos_abiertos_todas`.

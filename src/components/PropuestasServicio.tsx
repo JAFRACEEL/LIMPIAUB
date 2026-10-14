@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
 import { hoyLima } from '../lib/horario'
-import { formatoSoles } from '../lib/precios'
+import { formatoSoles, totalAContratar } from '../lib/precios'
 import { ETIQUETA_MODALIDAD } from '../lib/modalidades'
 import type { Propuesta, Reserva, TrabajadorPublico } from '../types'
 import { Estrellas } from './Estrellas'
@@ -77,7 +77,7 @@ export function PropuestasServicio({
               </div>
               <div className="shrink-0 text-right">
                 {propuesta ? (
-                  <p className="text-base font-bold text-teal-800">{formatoSoles(propuesta.total_propuesta)}</p>
+                  <p className="text-base font-bold text-teal-800">{formatoSoles(totalAContratar(propuesta, reserva.recargo_materiales))}</p>
                 ) : (
                   <p className="text-xs text-neutral-500">Sin propuesta aún</p>
                 )}
@@ -104,7 +104,7 @@ export function PropuestasServicio({
                 </button>
                 {expandida && (
                   <div className="mt-3">
-                    <PropuestaTarjeta propuesta={propuesta} nombre={nombre} contratar onResuelta={onCambio} />
+                    <PropuestaTarjeta propuesta={propuesta} nombre={nombre} contratar kit={reserva.recargo_materiales} onResuelta={onCambio} />
                   </div>
                 )}
               </>

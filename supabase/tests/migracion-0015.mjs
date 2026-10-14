@@ -194,6 +194,47 @@ console.log('\n— Protección de columnas económicas (UPDATE directo)')
   ok((await intenta(() => como(ADM, () => db.exec(`update reservas set comision_pct=15 where id='${idDirecto}'`)))).ok, 'el admin sí puede ajustar la comisión por reserva')
 }
 
+console.log('\n— Lo que define QUÉ y CUÁNDO no se reescribe después del INSERT (revisión del commit)')
+{
+  const [propia] = await q(`select trabajador_id from reservas where id=$1`, [idDirecto])
+  const cambios = [['servicio', "'Electricidad'"], ['subtipo_servicio', "'x'"], ['descripcion_trabajo', "'cambiar un enchufe'"], ['horas', '10'], ['fecha', "'2030-01-01'"],
+    ['hora', "'03:00'"], ['zona', "'Belén'"], ['modo', "'abierto'"], ['programacion', "'ahora'"], ['ventana_cierra_en', "now() + interval '9 hours'"], ['zona_ampliada', 'true']]
+  for (const [col, val] of cambios) {
+    const c = await intenta(() => como(C1, () => db.exec(`update reservas set ${col}=${val} where id='${idDirecto}'`)))
+    ok(!c.ok && /lo calcula Limpi/.test(c.e), `cliente no puede cambiar ${col}`)
+  }
+  for (const [col, val] of [['horas', '12'], ['servicio', "'Electricidad'"], ['fecha', "'2030-01-01'"]]) {
+    const p = await intenta(() => como(propia.trabajador_id, () => db.exec(`update reservas set ${col}=${val} where id='${idDirecto}'`)))
+    ok(!p.ok, `el profesional asignado tampoco puede cambiar ${col}`)
+  }
+  ok((await intenta(() => como(ADM, () => db.exec(`update reservas set horas=3 where id='${idDirecto}'`)))).ok, 'el admin sí puede corregirlo (soporte)')
+  const [h] = await q(`select horas, total from reservas where id=$1`, [idDirecto])
+  ok(Number(h.horas) === 3 && Number(h.total) === 108, 'y el total acordado no se movió con las horas (108)')
+}
+
+console.log('\n— El servidor valida la hora (no solo la interfaz)')
+{
+  const pasado = await intenta(() => nuevaReserva(C1, { fecha: '2020-01-01', hora: '09:00' }))
+  ok(!pasado.ok && /al menos 30 minutos/.test(pasado.e), 'una fecha en el pasado se rechaza')
+  const id = await nuevaReserva(C1, { programacion: 'ahora', fecha: '2020-01-01', hora: '03:00' })
+  const [r] = await q(`select fecha::text f, hora::text h, programacion from reservas where id=$1`, [id])
+  const dif = Math.abs(new Date(`${r.f}T${r.h}-05:00`).getTime() - Date.now()) / 60000
+  ok(r.programacion === 'ahora' && dif > 25 && dif < 40, `"lo antes posible" ignora la fecha del navegador y usa ahora + ~30 min de Lima (${r.f} ${r.h})`)
+}
+
+console.log('\n— `necesidad` viene del cliente: se acota')
+{
+  const raro = await nuevaReserva(C1, { necesidad: { alcance: { incluye: 'esto no es un arreglo', no_incluye: { a: 1 } } }, hora: '10:00', horas: 2 })
+  const ok1 = await intenta(() => como(W2, () => db.exec(`select postularme_a_reserva('${raro}')`)))
+  ok(ok1.ok, 'un `alcance` que no es arreglo no impide que un profesional se postule: ' + (ok1.e ?? ''))
+  const [of1] = await q(`select incluye, no_incluye from propuestas where reserva_id=$1`, [raro])
+  ok(of1.incluye.length === 0 && of1.no_incluye.length === 0, 'y la oferta queda con alcance vacío')
+  const largo = await nuevaReserva(C1, { necesidad: { alcance: { incluye: Array.from({ length: 50 }, (_, i) => 'x'.repeat(500) + i), no_incluye: [] } }, hora: '10:30', horas: 2 })
+  await como(W2, () => db.exec(`select postularme_a_reserva('${largo}')`))
+  const [of2] = await q(`select incluye from propuestas where reserva_id=$1`, [largo])
+  ok(of2.incluye.length === 20 && of2.incluye.every((l) => l.length <= 200), 'un alcance enorme se recorta a 20 líneas de 200 caracteres')
+}
+
 console.log('\n— Pedido abierto por horas: candidaturas, ofertas, propiedad y elección')
 let idAbierto
 {
