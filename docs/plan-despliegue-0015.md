@@ -43,7 +43,7 @@ Archivos preparados, **ninguno ejecutado en un proyecto Supabase**:
 | Archivo | Qué es | Estado |
 |---|---|---|
 | `supabase/rollback/0015_rollback.sql` | Reversa "hacia adelante": restaura funciones y vistas anteriores (literales de 0006/0010/0013/0014), quita `trg_oferta_directa`, apaga `propuestas_activas`, mantiene `total` como columna normal con fórmula antigua solo para reservas del modelo antiguo, reafirma permisos. No borra filas, tablas ni columnas. | **Pendiente de validación real** |
-| `supabase/tests/rollback-0015.mjs` | Simulación en PGlite: frontend antiguo contra base migrada, valores y permisos antes/después, aislamiento, idempotencia. Resultado: 54/54 (y detecta 2 reversas defectuosas a propósito). | Simulación; no sustituye a la real |
+| `supabase/tests/rollback-0015.mjs` | Simulación en PGlite: frontend antiguo contra base migrada, valores y permisos antes/después, aislamiento, envío interno de avisos con `fn_enviar_push` cerrada, idempotencia. Resultado: 56/56 (y detecta 2 reversas defectuosas a propósito). | Simulación; no sustituye a la real |
 | `supabase/tests/compat-reversa-real.mjs` | Lo mismo por la API real (modos `antiguo`, `aislamiento`, `foto`, `comparar`). | **Escrito, no ejecutado** |
 | `supabase/tests/consultas-esquema-solo-lectura.sql` | Inspección de metadatos con huellas md5; informa si falta `schema_migrations` sin abortar. | **Ejecutado en LIMPIA el 2026-10-14 (solo lectura, autorizado)**; resultados en `docs/inspeccion-esquema-limpia.md`: estructura y permisos = 0001–0014, 0015 no aplicada; cuerpos de funciones sin verificar (falta `limpia-test`) |
 
@@ -59,9 +59,16 @@ Hallazgos de la simulación (no confirmados en real):
 3. Repetir tras la reversa.
 `ae7a510` es la versión candidata del publicado, no una identificación exacta.
 
+## 4d. Hallazgos de la inspección de LIMPIA y trabajo derivado
+- Estructura y permisos de LIMPIA = 0001–0014; la 0015 no está aplicada (`docs/inspeccion-esquema-limpia.md`).
+- **17 diferencias en cuerpos de funciones sin explicación demostrada.** Se resolverán en `limpia-test` con `supabase/tests/consultas-huellas-funciones.sql` y `comparar-huellas.mjs` (solo la categoría `IGUAL` prueba equivalencia). Afecta a la 0015 porque reemplaza `postularme_a_reserva`, `elegir_candidata` y `fn_push_reservas_insert`.
+- **`fn_enviar_push` hoy es ejecutable por `anon` y `authenticated` en LIMPIA.** Parche mínimo independiente de la 0015 en `supabase/hotfix/` (`docs/hotfix-fn-enviar-push.md`): probado solo en simulación (37/37), **no ejecutado** en ningún proyecto.
+
 ## 5. Condiciones para volver a pedir autorización
 1. Revisión Codex hecha y hallazgos aprobados corregidos.
 2. `integracion-real.mjs` pasando en entorno aislado (incluida la parte de `pg_net`).
 3. Prueba de compatibilidad: frontend `ae7a510` contra la base con 0015 en ese entorno.
 4. `0015_rollback.sql` probado en ese entorno.
 5. Comparación de esquema real vs esperado y respaldo confirmados.
+6. Las 17 diferencias de funciones clasificadas en `limpia-test`; toda función distinta de `IGUAL` revisada con autorización puntual.
+7. Decisión aparte sobre el parche de `fn_enviar_push` (puede aplicarse antes que la 0015, tras probarlo en `limpia-test`).

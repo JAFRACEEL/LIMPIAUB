@@ -22,7 +22,7 @@ Navegación del cliente: Inicio, Mis servicios (`/reservas`: la ruta se mantiene
 - **`VITE_PROPUESTAS_ACTIVAS` solo cambia la interfaz.** Para activar de verdad hay que cambiar las DOS cosas (variable de Vercel y `app_config`). Si solo se enciende la variable, el servidor rechaza el pedido con un mensaje en español; si solo se enciende el servidor, la interfaz sigue sin ofrecerlo.
 - **Precios**: el servidor fija tarifa, totales, comisión (20%) y kit (S/18 = S/13 + S/5). Un servicio sin `precios_profesional` configurado NO recibe oferta (error, nunca un precio inventado ni horas de reemplazo).
 - **Propiedad y aceptación**: contratar y responder propuestas exigen ser el cliente de esa reserva; las propuestas aceptadas no se editan; `pago_confirmado` solo lo marca `confirmar_pago` (admin).
-- **Permisos**: las funciones internas (`fn_*`) no son invocables desde la app. `fn_enviar_push` (0013) quedó solo para triggers y funciones del servidor: antes cualquier usuario con sesión podía enviar avisos a otros.
+- **Permisos**: las funciones internas (`fn_*`) no son invocables desde la app. `fn_enviar_push` (0013) queda solo para triggers y funciones del servidor **cuando se aplique la 0015**. Hoy en LIMPIA sigue ejecutable por `anon` y `authenticated` (inspección del 2026-10-14); hay un parche independiente sin aplicar en `supabase/hotfix/` (ver `docs/hotfix-fn-enviar-push.md`).
 
 ## Qué se puede contratar hoy y qué se muestra
 - Hoy solo "por horas" es operativo, y únicamente en servicios donde cobrar por tiempo tiene sentido (limpieza, lavado, organización, reparaciones generales).
