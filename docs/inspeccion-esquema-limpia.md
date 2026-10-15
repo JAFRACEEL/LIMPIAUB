@@ -20,8 +20,19 @@ Solo salen nombres, tipos, firmas, permisos y huellas md5 (ninguna definición e
 
 **No se encontró ninguna diferencia estructural.** Ninguno de los objetos que crea la 0015 existe en producción (18 funciones, `propuestas`, `pagos`, `precios_profesional`, `servicio_modalidades`, columnas nuevas de `reservas`, `app_config.propuestas_activas`).
 
-## Límite de esta comparación (importante)
-Los **cuerpos** de las funciones no quedaron verificados: solo 3 de 22 huellas coinciden con las de la simulación. La simulación usa PostgreSQL 18 (PGlite) y producción 17, y los archivos del repositorio tienen saltos de línea de Windows; ambas cosas cambian el texto del que se calcula el md5. Lo que sí está verificado es la estructura y los permisos. Para comparar cuerpos hay que correr la misma consulta en `limpia-test` (mismo PostgreSQL 17, con los mismos archivos) y comparar huellas. Eso queda pendiente del proyecto de pruebas.
+## Límite de esta comparación (importante): 17 diferencias de funciones SIN explicación demostrada
+La estructura y los permisos coinciden, pero los **cuerpos** de las funciones **no quedaron verificados**. Las huellas originales (md5 de `pg_get_functiondef`) de LIMPIA coinciden con las de la simulación en solo 3 de 22 funciones (`fn_proteger_reserva`, `fn_validar_solapamiento`, `trabajador_disponible_en`): **19 difieren**.
+
+Qué se ha podido explicar y qué no (todo con la simulación local, sin consultar producción de nuevo):
+- Solo **2** funciones tienen retornos de carro (`\r`) dentro del cuerpo en la simulación: `puede_ver_foto_referencia` y `fn_proteger_detalles_servicio`. Quitarlos hace coincidir **2 más** (5 de 22). Es un apoyo, no una prueba: un `\r` dentro de un literal también cambia el texto, y no se sabe si LIMPIA tiene esos retornos.
+- Quedan **17 diferencias sin explicación demostrada.** No se atribuyen a PostgreSQL 17 frente a 18 ni a otra causa: es una hipótesis no comprobada. Pueden ser diferencias de representación (cabecera de `pg_get_functiondef` según versión) o **cambios reales** (una función editada a mano en producción, una versión distinta de una migración).
+- Las huellas originales se conservan tal como salieron; **no se sustituyen por huellas normalizadas**. Normalizar todos los espacios no demuestra equivalencia: puede ocultar un cambio dentro de un literal de texto. Las comparaciones normalizadas solo orientan dónde mirar primero.
+
+Cómo se resolverá (nada de esto se ha ejecutado en LIMPIA; las consultas nuevas requieren una autorización nueva y específica):
+1. En `limpia-test` (mismo motor que producción), aplicar `schema.sql` + 0001–0014 con los mismos archivos y correr `supabase/tests/consultas-huellas-funciones.sql`. Aísla el efecto de la versión: si las huellas originales de `limpia-test` coinciden con las de LIMPIA, no hay cambio; si no, es el texto.
+2. `huella_cuerpo` (md5 de `prosrc`, sin cabecera) no depende de la versión del motor: solo si coincide, el cuerpo es idéntico. Si LIMPIA y `limpia-test` difieren ahí, hay un cambio real en el texto.
+3. `supabase/tests/comparar-huellas.mjs` clasifica cada función: `IGUAL` (única categoría que prueba equivalencia), `CABECERA_DISTINTA`, `SOLO_FIN_DE_LINEA`, `SOLO_ESPACIOS` (no demostrado), `DISTINTA`, `SOLO_EN_UNO`. Su prueba local (`comparar-huellas.prueba.mjs`, 5/5) comprueba que un cambio de espacios dentro de un literal sale como `SOLO_ESPACIOS` y nunca como `IGUAL`.
+4. Para toda función clasificada distinta de `IGUAL` se pedirá autorización puntual para revisar su texto; hasta entonces el despliegue de cualquier migración que reemplace una de ellas (`postularme_a_reserva`, `elegir_candidata`, `fn_push_reservas_insert`) no debe darse por seguro.
 
 ## Qué de lo encontrado afecta a la 0015
 1. **`total` es columna calculada** (`generada = 's'`): la 0015 la convierte en columna normal (`drop expression`); el estado actual es el que la migración espera (la rama condicional se ejecutará).
