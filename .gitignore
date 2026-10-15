@@ -27,3 +27,6 @@ supabase/.temp
 .playwright-mcp/
 capturas/
 supabase/tests/.tmp-*
+
+# Fotos de datos de pruebas (reversa 0015); contienen filas de un proyecto de pruebas
+*.local.json
