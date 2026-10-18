@@ -67,7 +67,9 @@ Hallazgos de la simulación (no confirmados en real):
 ## 4e. Cambio de entorno (2026-10-17) y estado
 - El dueño declaró LIMPIA un piloto con datos de prueba y eligió usarla en vez de `limpia-test`. Esto cambia el riesgo de datos, **no** las autorizaciones: aplicar la 0015, la reversa o el parche en LIMPIA requiere una instrucción explícita para esa acción.
 - Hecho: respaldo interno `respaldo_pre0015`, cuentas y reservas sintéticas, comprobación real de que `fn_enviar_push` está abierta a `anon`. Falta un volcado externo (la CLI no tiene sesión).
-- **Rechazado por el dueño:** el envío de la 0015 a LIMPIA. Pendiente de nueva instrucción.
+- **Actualización posterior (2026-10-17): la 0015 está APLICADA en LIMPIA** (la pegó el dueño en el SQL Editor). Verificada por metadatos y por la API real (`flujo-demo-real.mjs` 16/16; `fn_enviar_push` cerrada). El frontend publicado en `limpi-fawn.vercel.app` (`ae7a510`) corre ahora contra la base migrada: su compatibilidad real por la API sigue **sin probarse** (faltan `compat-reversa-real.mjs` y la prueba en navegador); en simulación era compatible.
+- Vista previa publicada en Vercel (preview, sin `--prod`) conectada a LIMPIA, con aviso "ENTORNO DE PRUEBAS".
+- Sigue pendiente: reversa real, huellas de funciones, parche (ya innecesario para `fn_enviar_push` en LIMPIA, la 0015 la cerró), Codex y push a celular.
 - La 0015 ganó la sección 10 (quita `fn_total_compat` y su trigger si existen) para poder reaplicarla tras la reversa. `reaplicar-0015.mjs`: 2/2 en simulación. Pruebas re-ejecutadas sin fallos: migración 182/182, reversa 56/56, cadena 30/30, Vitest 167/167.
 - Vista previa: la app muestra "ENTORNO DE PRUEBAS" solo si se compila con `VITE_ENTORNO_PRUEBAS=si`. Sin publicar.
 

@@ -22,7 +22,7 @@ Navegación del cliente: Inicio, Mis servicios (`/reservas`: la ruta se mantiene
 - **`VITE_PROPUESTAS_ACTIVAS` solo cambia la interfaz.** Para activar de verdad hay que cambiar las DOS cosas (variable de Vercel y `app_config`). Si solo se enciende la variable, el servidor rechaza el pedido con un mensaje en español; si solo se enciende el servidor, la interfaz sigue sin ofrecerlo.
 - **Precios**: el servidor fija tarifa, totales, comisión (20%) y kit (S/18 = S/13 + S/5). Un servicio sin `precios_profesional` configurado NO recibe oferta (error, nunca un precio inventado ni horas de reemplazo).
 - **Propiedad y aceptación**: contratar y responder propuestas exigen ser el cliente de esa reserva; las propuestas aceptadas no se editan; `pago_confirmado` solo lo marca `confirmar_pago` (admin).
-- **Permisos**: las funciones internas (`fn_*`) no son invocables desde la app. `fn_enviar_push` (0013) queda solo para triggers y funciones del servidor **cuando se aplique la 0015**. Hoy en LIMPIA sigue ejecutable por `anon` y `authenticated` (inspección del 2026-10-14); hay un parche independiente sin aplicar en `supabase/hotfix/` (ver `docs/hotfix-fn-enviar-push.md`).
+- **Permisos**: las funciones internas (`fn_*`) no son invocables desde la app. `fn_enviar_push` (0013) queda solo para triggers y funciones del servidor **cuando se aplique la 0015**. En LIMPIA ya está cerrada desde que se aplicó la 0015 (2026-10-17; comprobado por la API: HTTP 401). El parche independiente de `supabase/hotfix/` (ver `docs/hotfix-fn-enviar-push.md`) queda como alternativa solo para una base que no tenga la 0015.
 
 ## Qué se puede contratar hoy y qué se muestra
 - Hoy solo "por horas" es operativo, y únicamente en servicios donde cobrar por tiempo tiene sentido (limpieza, lavado, organización, reparaciones generales).
@@ -62,7 +62,7 @@ Navegación del cliente: Inicio, Mis servicios (`/reservas`: la ruta se mantiene
 `npm i --no-save @electric-sql/pglite web-push@3.6.7` y luego `node supabase/tests/migracion-0015.mjs`, `node supabase/tests/cadena.mjs` (tras `entorno-local.ps1 -SoloPreparar`) y `node supabase/tests/send-push.mjs` repiten las comprobaciones sin tocar ninguna base.
 
 ## Vista previa de pruebas
-La app compilada con `VITE_ENTORNO_PRUEBAS=si` muestra una franja "ENTORNO DE PRUEBAS", una etiqueta "PRUEBAS" y `[PRUEBAS]` en el título (`src/components/AvisoEntornoPruebas.tsx`). El build normal no muestra nada. Una vista previa solo sirve si apunta a una base que ya tiene la 0015; **hoy no existe ninguna publicada**.
+La app compilada con `VITE_ENTORNO_PRUEBAS=si` muestra una franja "ENTORNO DE PRUEBAS", una etiqueta "PRUEBAS" y `[PRUEBAS]` en el título (`src/components/AvisoEntornoPruebas.tsx`). El build normal no muestra nada. Una vista previa solo sirve si apunta a una base que ya tiene la 0015. El 2026-10-17 se publicó una vista previa (target `preview`, sin `--prod`) conectada a LIMPIA, que ya tiene la 0015; la producción `limpi-fawn.vercel.app` no se tocó. Solo "por horas" es contratable; las demás formas siguen deshabilitadas (`propuestas_activas=false`).
 
 ## "Reparaciones generales": limitación conocida
 Se cobra por horas, así que se delimitó: solo colgar cuadros, accesorios livianos y ajustes menores. Un texto que nombre electricidad, gasfitería, cerrajería, aire acondicionado, pintura, albañilería, carpintería o vidriería se rechaza en la interfaz (lista amplia, `oficiosFueraDeGenerales`) y en el servidor (lista corta, `fn_oficio_en_texto`), con un botón para pedirlo en el servicio correcto.
