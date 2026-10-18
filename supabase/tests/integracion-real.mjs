@@ -22,8 +22,9 @@ if (!url || !anon || !servicio || !['sembrar', 'verificar'].includes(modo)) {
   console.error('Uso: node integracion-real.mjs <sembrar|verificar> con TEST_SUPABASE_URL / _ANON_KEY / _SERVICE_KEY')
   process.exit(2)
 }
-if (url.includes('ztlxmdeviurdhqyabhvb') || process.env.TEST_CONFIRMO_ENTORNO_DE_PRUEBAS !== 'si') {
-  console.error('Rechazado: esto solo corre contra un proyecto de PRUEBAS (TEST_CONFIRMO_ENTORNO_DE_PRUEBAS=si) y nunca contra producción.')
+// LIMPIA solo se admite como piloto con datos de prueba, autorizado por el dueño el 2026-10-17 (TEST_PILOTO_LIMPIA=si).
+if ((url.includes('ztlxmdeviurdhqyabhvb') && process.env.TEST_PILOTO_LIMPIA !== 'si') || process.env.TEST_CONFIRMO_ENTORNO_DE_PRUEBAS !== 'si') {
+  console.error('Rechazado: hace falta TEST_CONFIRMO_ENTORNO_DE_PRUEBAS=si, y contra LIMPIA además TEST_PILOTO_LIMPIA=si.')
   process.exit(2)
 }
 

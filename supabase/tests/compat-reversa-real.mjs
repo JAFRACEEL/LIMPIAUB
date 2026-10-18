@@ -44,8 +44,9 @@ const url = process.env.TEST_SUPABASE_URL, anon = process.env.TEST_SUPABASE_ANON
 if (!url || !anon || !servicio || !['antiguo', 'aislamiento', 'foto'].includes(modo)) {
   console.error('Uso: node --env-file=.env.test.local compat-reversa-real.mjs <antiguo|aislamiento|foto <archivo>|comparar a b>'); process.exit(2)
 }
-if (url.includes('ztlxmdeviurdhqyabhvb') || process.env.TEST_CONFIRMO_ENTORNO_DE_PRUEBAS !== 'si') {
-  console.error('Rechazado: solo corre contra un proyecto de PRUEBAS (TEST_CONFIRMO_ENTORNO_DE_PRUEBAS=si), nunca contra producción.'); process.exit(2)
+// LIMPIA solo se admite como piloto con datos de prueba, autorizado por el dueño el 2026-10-17 (TEST_PILOTO_LIMPIA=si).
+if ((url.includes('ztlxmdeviurdhqyabhvb') && process.env.TEST_PILOTO_LIMPIA !== 'si') || process.env.TEST_CONFIRMO_ENTORNO_DE_PRUEBAS !== 'si') {
+  console.error('Rechazado: hace falta TEST_CONFIRMO_ENTORNO_DE_PRUEBAS=si, y contra LIMPIA además TEST_PILOTO_LIMPIA=si.'); process.exit(2)
 }
 const admin = createClient(url, servicio, { auth: { persistSession: false } })
 

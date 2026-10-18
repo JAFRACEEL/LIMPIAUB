@@ -4,6 +4,12 @@
 **Pendiente de ejecutar.** En la máquina de desarrollo la CLI de Supabase está instalada (2.117.0), pero no hay Docker, no hay ninguna distribución de WSL y la virtualización está desactivada en el firmware. La organización de Supabase está en el plan gratuito (sin ramas de base de datos) y el único proyecto de Limpi es el de producción (`LIMPIA`), que no se usa para pruebas y no se ha pausado ni modificado.
 Hasta que `supabase/tests/integracion-real.mjs` pase, el cierre definitivo de la experiencia del cliente sigue abierto.
 
+**Actualización 2026-10-17 (LIMPIA como piloto):** el dueño aclaró que LIMPIA es un piloto con datos de prueba y eligió usarla en lugar de crear `limpia-test`. Hecho en LIMPIA hasta ahora (nada más):
+- Respaldo interno: esquema privado `respaldo_pre0015` (copia de las 9 tablas y de las definiciones de funciones, vistas, triggers, políticas, permisos y restricciones; `anon` y `authenticated` sin acceso). No sustituye a un volcado externo.
+- 8 cuentas ficticias `@prueba.limpi.test` (5 de los scripts y 3 demo) y 2 reservas en el formato anterior a la 0015. Las contraseñas demo están solo en `cuentas-demo.local.json` (ignorado por Git).
+- Prueba real por la API: antes de la 0015, un visitante anónimo **sí** puede llamar a `fn_enviar_push` (HTTP 204, con lista vacía, sin avisos).
+- **La 0015 NO se ha aplicado.** El dueño rechazó la ejecución cuando se iba a enviar; no se reintenta sin una instrucción nueva. Los scripts reales aceptan LIMPIA solo con `TEST_PILOTO_LIMPIA=si`.
+
 ## Qué se verificó y qué no
 | Capa | Qué se comprueba | Cómo | Estado |
 |---|---|---|---|
@@ -13,6 +19,7 @@ Hasta que `supabase/tests/integracion-real.mjs` pase, el cierre definitivo de la
 | Reversa `0015_rollback.sql`: frontend antiguo contra base migrada, valores y permisos antes/después, aislamiento, envío interno de avisos | sin pérdida de importes, propuestas ni pagos; `fn_enviar_push` cerrada | `node supabase/tests/rollback-0015.mjs` (PGlite) | **Verificado en simulación: 56 de 56** |
 | Parche `fn_enviar_push` (`supabase/hotfix/`) | cierre a `anon`/`authenticated`/PUBLIC; el envío legítimo por trigger sigue; guardianes que abortan sin cambios; recuperación sin reabrir | `node supabase/tests/hotfix-fn-enviar-push.mjs` (PGlite, dueño no superusuario) | **Verificado en simulación: 37 de 37** |
 | Clasificador de huellas de funciones | un cambio de espacios en un literal no pasa por equivalente | `node supabase/tests/comparar-huellas.prueba.mjs` (PGlite) | **Verificado en simulación: 5 de 5** |
+| Reaplicar la 0015 tras la reversa | el resultado es idéntico a aplicar la 0015 una sola vez (362 elementos); la 0015 quita `fn_total_compat` y su trigger (sección 10) | `node supabase/tests/reaplicar-0015.mjs` (PGlite) | **Verificado en simulación: 2 de 2** (detectó que la reversa dejaba un trigger activo; corregido) |
 | Postgres real (no PGlite), API real: sesiones (JWT de GoTrue), permisos de PostgREST, RLS vía API, `pg_net` | los mismos flujos por la API de Supabase | `integracion-real.mjs` | **No ejecutado** |
 | Frontend antiguo y reversa por la API real | operaciones de `ae7a510`, aislamiento, valores antes/después de la reversa | `compat-reversa-real.mjs` | **No ejecutado** |
 | Parche `fn_enviar_push` por la API real | llamada anónima con lista vacía (sin efectos) antes y después | `fn-enviar-push-api.mjs` | **No ejecutado** |

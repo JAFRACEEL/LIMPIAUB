@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './context/AuthContext.tsx'
+import AvisoEntornoPruebas, { ES_ENTORNO_PRUEBAS } from './components/AvisoEntornoPruebas.tsx'
+
+if (ES_ENTORNO_PRUEBAS) document.title = `[PRUEBAS] ${document.title}`
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -17,6 +20,7 @@ if ('serviceWorker' in navigator) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
+      <AvisoEntornoPruebas />
       <AuthProvider>
         <App />
       </AuthProvider>

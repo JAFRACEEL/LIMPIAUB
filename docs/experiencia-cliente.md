@@ -61,6 +61,9 @@ Navegación del cliente: Inicio, Mis servicios (`/reservas`: la ruta se mantiene
 
 `npm i --no-save @electric-sql/pglite web-push@3.6.7` y luego `node supabase/tests/migracion-0015.mjs`, `node supabase/tests/cadena.mjs` (tras `entorno-local.ps1 -SoloPreparar`) y `node supabase/tests/send-push.mjs` repiten las comprobaciones sin tocar ninguna base.
 
+## Vista previa de pruebas
+La app compilada con `VITE_ENTORNO_PRUEBAS=si` muestra una franja "ENTORNO DE PRUEBAS", una etiqueta "PRUEBAS" y `[PRUEBAS]` en el título (`src/components/AvisoEntornoPruebas.tsx`). El build normal no muestra nada. Una vista previa solo sirve si apunta a una base que ya tiene la 0015; **hoy no existe ninguna publicada**.
+
 ## "Reparaciones generales": limitación conocida
 Se cobra por horas, así que se delimitó: solo colgar cuadros, accesorios livianos y ajustes menores. Un texto que nombre electricidad, gasfitería, cerrajería, aire acondicionado, pintura, albañilería, carpintería o vidriería se rechaza en la interfaz (lista amplia, `oficiosFueraDeGenerales`) y en el servidor (lista corta, `fn_oficio_en_texto`), con un botón para pedirlo en el servicio correcto.
 

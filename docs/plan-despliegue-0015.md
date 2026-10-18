@@ -64,6 +64,13 @@ Hallazgos de la simulación (no confirmados en real):
 - **17 diferencias en cuerpos de funciones sin explicación demostrada.** Se resolverán en `limpia-test` con `supabase/tests/consultas-huellas-funciones.sql` y `comparar-huellas.mjs` (solo la categoría `IGUAL` prueba equivalencia). Afecta a la 0015 porque reemplaza `postularme_a_reserva`, `elegir_candidata` y `fn_push_reservas_insert`.
 - **`fn_enviar_push` hoy es ejecutable por `anon` y `authenticated` en LIMPIA.** Parche mínimo independiente de la 0015 en `supabase/hotfix/` (`docs/hotfix-fn-enviar-push.md`): probado solo en simulación (37/37), **no ejecutado** en ningún proyecto.
 
+## 4e. Cambio de entorno (2026-10-17) y estado
+- El dueño declaró LIMPIA un piloto con datos de prueba y eligió usarla en vez de `limpia-test`. Esto cambia el riesgo de datos, **no** las autorizaciones: aplicar la 0015, la reversa o el parche en LIMPIA requiere una instrucción explícita para esa acción.
+- Hecho: respaldo interno `respaldo_pre0015`, cuentas y reservas sintéticas, comprobación real de que `fn_enviar_push` está abierta a `anon`. Falta un volcado externo (la CLI no tiene sesión).
+- **Rechazado por el dueño:** el envío de la 0015 a LIMPIA. Pendiente de nueva instrucción.
+- La 0015 ganó la sección 10 (quita `fn_total_compat` y su trigger si existen) para poder reaplicarla tras la reversa. `reaplicar-0015.mjs`: 2/2 en simulación. Pruebas re-ejecutadas sin fallos: migración 182/182, reversa 56/56, cadena 30/30, Vitest 167/167.
+- Vista previa: la app muestra "ENTORNO DE PRUEBAS" solo si se compila con `VITE_ENTORNO_PRUEBAS=si`. Sin publicar.
+
 ## 5. Condiciones para volver a pedir autorización
 1. Revisión Codex hecha y hallazgos aprobados corregidos.
 2. `integracion-real.mjs` pasando en entorno aislado (incluida la parte de `pg_net`).

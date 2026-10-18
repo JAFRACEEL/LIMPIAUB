@@ -1240,3 +1240,12 @@ begin
     end if;
   end if;
 end $$;
+
+-- ============================================================
+-- 10. Si se aplica de nuevo tras supabase/rollback/0015_rollback.sql
+-- ============================================================
+-- La reversa deja una fórmula antigua de total solo para reservas del modelo
+-- antiguo; con la 0015 activa el total lo fija el servidor y ya no hace falta.
+-- En una primera aplicación no existen y estas líneas no hacen nada.
+drop trigger if exists trg_zz_total_compat on reservas;
+drop function if exists fn_total_compat();
