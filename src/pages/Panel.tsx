@@ -7,7 +7,7 @@ import { useToasts } from '../lib/useToasts'
 import { inicioSemanaLima, inicioMesLima, whatsappUrl, MARGEN_TRASLADO_MINUTOS } from '../lib/constantes'
 import { calcularComision, seSolapan } from '../lib/calculos'
 import { tieneSuscripcionGuardada } from '../lib/push'
-import { reproducirSonidoAlerta } from '../lib/sonido'
+import { activarSonido, audioListo, detenerAlarma, iniciarAlarma, prepararSonido, reproducirSonidoAlerta } from '../lib/sonido'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
 import { EditarPerfilTrabajador } from '../components/EditarPerfilTrabajador'
 import { DetallesServicioVista } from '../components/DetallesServicioVista'
@@ -345,6 +345,29 @@ export function Panel() {
     idPedidoActualRef.current = pedidoActual?.id ?? null
   }, [pedidoActual])
 
+  // Mientras la pantalla de "llamada" está a la vista, suena y vibra en bucle hasta que responda o la minimice.
+  const llamadaVisible = !!pedidoActual && !overlayMinimizado && !overlayConfirmacion
+  useEffect(() => {
+    prepararSonido()
+  }, [])
+  useEffect(() => {
+    if (!llamadaVisible) return
+    iniciarAlarma()
+    return () => detenerAlarma()
+  }, [llamadaVisible, pedidoActual?.id])
+  // iPhone: si abrió la app desde la notificación sin tocar nada, el audio sigue bloqueado; se lo avisamos.
+  const [audioBloqueado, setAudioBloqueado] = useState(false)
+  useEffect(() => {
+    if (!llamadaVisible) {
+      setAudioBloqueado(false)
+      return
+    }
+    const revisar = () => setAudioBloqueado(!audioListo())
+    revisar()
+    const id = window.setInterval(revisar, 700)
+    return () => window.clearInterval(id)
+  }, [llamadaVisible])
+
   async function overlayResponderDirecta(id: string, accion: 'aceptar' | 'rechazar') {
     const exito = await cambiarEstado(id, 'solicitada', { estado: accion === 'aceptar' ? 'aceptada' : 'rechazada' })
     if (!exito) return
@@ -510,6 +533,15 @@ export function Panel() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-6">
+      {audioBloqueado && (
+        <button
+          type="button"
+          onClick={activarSonido}
+          className="fixed inset-x-4 bottom-24 z-[60] rounded-2xl bg-amber-400 px-4 py-4 text-center text-base font-bold text-neutral-900 shadow-xl"
+        >
+          🔔 Toca aquí para activar el sonido
+        </button>
+      )}
       <PedidoEntranteOverlay
         pedido={overlayConfirmacion ? null : pedidoActual}
         confirmacion={overlayConfirmacion}
@@ -536,7 +568,7 @@ export function Panel() {
       {!trabajador.habilitado_trabajar ? (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
           {!trabajador.verificado
-            ? 'Tu perfil está en revisión. Un administrador de Limpi verificará tus datos antes de que puedas activar "Disponible ahora".'
+            ? 'Tu perfil está en revisión. Un administrador de YAVI verificará tus datos antes de que puedas activar "Disponible ahora".'
             : trabajador.estado_migratorio === 'rechazado'
               ? 'No pudimos validar tu autorización para trabajar en Perú. Escríbenos para revisar tu caso.'
               : 'Tu perfil está verificado, pero tu autorización para trabajar en Perú aún está pendiente de validación. Te avisaremos apenas esté lista.'}
@@ -582,7 +614,7 @@ export function Panel() {
               onClick={alternarDisponible}
               disabled={actualizando || tieneNotificaciones === null}
               className={`relative h-9 w-16 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-                trabajador.disponible_ahora ? 'bg-green-600' : 'bg-neutral-300'
+                trabajador.disponible_ahora ? 'bg-green-700' : 'bg-neutral-300'
               }`}
             >
               <span
@@ -611,7 +643,7 @@ export function Panel() {
             onClick={alternarKitPropio}
             disabled={actualizando}
             className={`relative h-9 w-16 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-              trabajador.kit_propio ? 'bg-green-600' : 'bg-neutral-300'
+              trabajador.kit_propio ? 'bg-green-700' : 'bg-neutral-300'
             }`}
           >
             <span
@@ -644,17 +676,17 @@ export function Panel() {
 
       <Seccion titulo="Ganancias">
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-teal-50 p-3 text-center">
+          <div className="rounded-xl bg-brand-50 p-3 text-center">
             <dt className="text-xs text-neutral-500">Esta semana (neto)</dt>
-            <dd className="text-lg font-semibold text-teal-800">S/ {ganancias.semana.toFixed(2)}</dd>
+            <dd className="text-lg font-semibold text-brand-800">S/ {ganancias.semana.toFixed(2)}</dd>
           </div>
-          <div className="rounded-xl bg-teal-50 p-3 text-center">
+          <div className="rounded-xl bg-brand-50 p-3 text-center">
             <dt className="text-xs text-neutral-500">Este mes (neto)</dt>
-            <dd className="text-lg font-semibold text-teal-800">S/ {ganancias.mes.toFixed(2)}</dd>
+            <dd className="text-lg font-semibold text-brand-800">S/ {ganancias.mes.toFixed(2)}</dd>
           </div>
         </div>
         <p className="text-xs text-neutral-500">
-          Neto = lo que te queda después de la comisión de Limpi (incluye el S/ 13 de tu kit cuando corresponde).
+          Neto = lo que te queda después de la comisión de YAVI (incluye el S/ 13 de tu kit cuando corresponde).
         </p>
 
         {prestamo && (
@@ -698,11 +730,11 @@ export function Panel() {
                 <a
                   href={whatsappUrl(
                     contactosClientes[r.cliente_id].telefono,
-                    `Hola ${contactosClientes[r.cliente_id].nombre}, te escribo por tu reserva de Limpi (${r.servicio}).`,
+                    `Hola ${contactosClientes[r.cliente_id].nombre}, te escribo por tu reserva de YAVI (${r.servicio}).`,
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-1 inline-block rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white"
+                  className="mt-1 inline-block rounded-lg bg-green-700 px-3 py-1.5 text-xs font-semibold text-white"
                 >
                   WhatsApp con {contactosClientes[r.cliente_id].nombre.split(' ')[0]}
                 </a>
@@ -871,7 +903,7 @@ function CompletarDocumentosMigratorios({
           type="button"
           disabled={enviando}
           onClick={enviar}
-          className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {enviando ? 'Enviando…' : 'Enviar documentos'}
         </button>
@@ -920,7 +952,7 @@ function ControlServicio({
       <button
         disabled={procesando}
         onClick={() => onCambiarEstado({ estado: 'en_camino' }, 'aceptada')}
-        className="mt-2 w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="mt-2 w-full rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
       >
         Voy en camino
       </button>
@@ -937,7 +969,7 @@ function ControlServicio({
           <button
             disabled={procesando}
             onClick={() => onCambiarEstado({ hora_llegada: new Date().toISOString() }, 'en_camino')}
-            className="w-full rounded-lg border border-teal-700 px-3 py-2 text-sm font-semibold text-teal-700 disabled:opacity-60"
+            className="w-full rounded-lg border border-brand-700 px-3 py-2 text-sm font-semibold text-brand-700 disabled:opacity-60"
           >
             Ya llegué
           </button>
@@ -945,7 +977,7 @@ function ControlServicio({
         <button
           disabled={procesando}
           onClick={() => onCambiarEstado({ estado: 'en_curso' }, 'en_camino')}
-          className="w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="w-full rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           Iniciar servicio
         </button>
@@ -972,7 +1004,7 @@ function ControlServicio({
       <button
         disabled={procesando}
         onClick={() => onCambiarEstado({ estado: 'completada' }, 'en_curso')}
-        className="w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="w-full rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
       >
         Finalizar servicio
       </button>

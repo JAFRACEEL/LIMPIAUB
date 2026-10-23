@@ -60,6 +60,9 @@ export function PasoNecesidad({
   const [cambiando, setCambiando] = useState(false)
   const [editandoTexto, setEditandoTexto] = useState(b.texto.trim().length < 3)
   const [borradorTexto, setBorradorTexto] = useState(b.texto)
+  // Abierto/cerrado lo decide la persona, no el largo del texto: si dependiera de él, el cuadro se cerraba
+  // (y el teclado con él) al escribir la tercera letra.
+  const [detallesAbierto, setDetallesAbierto] = useState(b.texto.trim().length < 3)
   const [elegida, setElegida] = useState<{ servicioId: string; confirmacion: string; aviso?: string; modalidadSugerida?: 'diagnostico' | 'cotizacion' | 'fijo' | 'horas' } | null>(null)
 
   const interpretacion: Interpretacion | null = useMemo(
@@ -125,7 +128,7 @@ export function PasoNecesidad({
                 setEditandoTexto(false)
                 setElegida(null)
               }}
-              className="rounded-xl bg-teal-700 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-40"
+              className="rounded-xl bg-brand-700 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-40"
             >
               Continuar
             </button>
@@ -134,7 +137,7 @@ export function PasoNecesidad({
           !cambiando && (
             <blockquote className="rounded-xl bg-neutral-100 px-4 py-3 text-sm text-neutral-700">
               “{b.texto.trim()}”
-              <button type="button" onClick={() => { setBorradorTexto(b.texto); setEditandoTexto(true) }} className="ml-2 text-xs font-semibold text-teal-700 underline">
+              <button type="button" onClick={() => { setBorradorTexto(b.texto); setEditandoTexto(true) }} className="ml-2 text-xs font-semibold text-brand-700 underline">
                 Editar
               </button>
             </blockquote>
@@ -180,7 +183,7 @@ export function PasoNecesidad({
               <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                 <p className="font-medium">No estamos seguros de haberte entendido.</p>
                 <p className="mt-1">Elige el servicio que más se parece y guardamos lo que escribiste.</p>
-                <button type="button" onClick={() => setCambiando(true)} className="mt-3 w-full rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white">
+                <button type="button" onClick={() => setCambiando(true)} className="mt-3 w-full rounded-xl bg-brand-700 px-4 py-3 font-semibold text-white">
                   Elegir servicio
                 </button>
               </div>
@@ -241,10 +244,10 @@ export function PasoNecesidad({
           <p className="mt-2">{estado.texto}</p>
           <p className="mt-2 text-amber-900">No te pedimos horas como reemplazo ni cobramos nada. Lo que escribiste queda guardado un rato por si vuelves.</p>
         </div>
-        <button type="button" onClick={() => setCambiando(true)} className="rounded-xl bg-teal-700 px-4 py-3.5 text-base font-semibold text-white">
+        <button type="button" onClick={() => setCambiando(true)} className="rounded-xl bg-brand-700 px-4 py-3.5 text-base font-semibold text-white">
           Elegir otro servicio
         </button>
-        <button type="button" onClick={onInicio} className="text-center text-sm font-semibold text-teal-800 underline">
+        <button type="button" onClick={onInicio} className="text-center text-sm font-semibold text-brand-800 underline">
           Volver al inicio
         </button>
       </div>
@@ -268,7 +271,7 @@ export function PasoNecesidad({
           {r.servicio.descripcion && <p className="mt-1 text-sm text-neutral-600">{r.servicio.descripcion}</p>}
           {b.texto.trim() && <p className="mt-1 text-sm text-neutral-500">“{b.texto.trim()}”</p>}
         </div>
-        <button type="button" onClick={() => setCambiando(true)} className="shrink-0 text-sm font-semibold text-teal-700 underline">
+        <button type="button" onClick={() => setCambiando(true)} className="shrink-0 text-sm font-semibold text-brand-700 underline">
           Cambiar
         </button>
       </div>
@@ -317,7 +320,7 @@ export function PasoNecesidad({
         <button
           type="button"
           onClick={() => actualizar((actual) => ({ ...borradorParaServicio('limpieza_basica', { texto: actual.texto, sugeridoId: actual.sugeridoId, trabajadorDirectoId: actual.trabajadorDirectoId }), direccion: actual.direccion, zona: actual.zona, programacion: actual.programacion, fecha: actual.fecha, hora: actual.hora, notas: actual.notas }))}
-          className="self-start text-sm font-semibold text-teal-700 underline"
+          className="self-start text-sm font-semibold text-brand-700 underline"
         >
           ← No es después de una obra
         </button>
@@ -330,7 +333,7 @@ export function PasoNecesidad({
             <label
               key={o.etiqueta}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm ${
-                b.subtipoId === o.subtipoId && b.respuestas.__simple === o.etiqueta ? 'border-teal-700 bg-teal-50' : 'border-neutral-300 bg-white'
+                b.subtipoId === o.subtipoId && b.respuestas.__simple === o.etiqueta ? 'border-brand-700 bg-brand-50' : 'border-neutral-300 bg-white'
               }`}
             >
               <input
@@ -338,7 +341,7 @@ export function PasoNecesidad({
                 name="subtipo_simple"
                 checked={b.subtipoId === o.subtipoId && b.respuestas.__simple === o.etiqueta}
                 onChange={() => actualizar({ subtipoId: o.subtipoId, respuestas: { ...b.respuestas, __simple: o.etiqueta } })}
-                className="mt-0.5 h-4 w-4 accent-teal-700"
+                className="mt-0.5 h-4 w-4 accent-brand-700"
               />
               <span>
                 {o.etiqueta}
@@ -368,8 +371,12 @@ export function PasoNecesidad({
       )}
 
       {/* Lo que escribió ya se ve arriba: solo se pide de nuevo si falta o si quiere editarlo. */}
-      <details open={b.texto.trim().length < 3} className="rounded-xl border border-neutral-200 bg-white px-4 py-3">
-        <summary className="cursor-pointer text-sm font-medium text-teal-800">
+      <details
+        open={detallesAbierto}
+        onToggle={(e) => setDetallesAbierto(e.currentTarget.open)}
+        className="rounded-xl border border-neutral-200 bg-white px-4 py-3"
+      >
+        <summary className="cursor-pointer text-sm font-medium text-brand-800">
           {b.texto.trim().length < 3
             ? requiereTexto
               ? 'Cuéntanos qué pasa'
@@ -412,7 +419,7 @@ export function PasoNecesidad({
           {fotosCfg.etiqueta}
           {fotosCfg.obligatorias ? ' *' : ''} — máx. {fotosCfg.maximo}
         </span>
-        <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-neutral-400 bg-white px-4 py-3 text-sm font-semibold text-teal-800">
+        <label className="flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-neutral-400 bg-white px-4 py-3 text-sm font-semibold text-brand-800">
           {fotos.length === 0 ? 'Agregar fotos' : fotos.length === 1 ? '1 foto elegida · cambiar' : `${fotos.length} fotos elegidas · cambiar`}
           <input
             type="file"
@@ -443,11 +450,11 @@ function Confirmar({
   textoCambiar?: string
 }) {
   return (
-    <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
-      <p className="text-lg font-semibold text-teal-950">{pregunta}</p>
-      {aviso && <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs text-teal-900">{aviso}</p>}
+    <div className="rounded-2xl border border-brand-200 bg-brand-50 p-4">
+      <p className="text-lg font-semibold text-brand-950">{pregunta}</p>
+      {aviso && <p className="mt-2 rounded-lg bg-white/70 px-3 py-2 text-xs text-brand-900">{aviso}</p>}
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <button type="button" onClick={onSi} className="rounded-xl bg-teal-700 px-3 py-3.5 text-base font-semibold text-white">
+        <button type="button" onClick={onSi} className="rounded-xl bg-brand-700 px-3 py-3.5 text-base font-semibold text-white">
           Sí, continuar
         </button>
         <button type="button" onClick={onCambiar} className="rounded-xl border border-neutral-300 bg-white px-3 py-3.5 text-base font-semibold text-neutral-700">
@@ -468,11 +475,11 @@ function Opciones({
   onCambiar: () => void
 }) {
   return (
-    <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4">
-      <p className="text-lg font-semibold text-teal-950">{pregunta}</p>
+    <div className="rounded-2xl border border-brand-200 bg-brand-50 p-4">
+      <p className="text-lg font-semibold text-brand-950">{pregunta}</p>
       <div className="mt-3 flex flex-col gap-2">
         {opciones.map((o) => (
-          <button key={o.etiqueta} type="button" onClick={o.onClick} className="rounded-xl border border-teal-300 bg-white px-4 py-3.5 text-left text-base font-medium text-teal-950">
+          <button key={o.etiqueta} type="button" onClick={o.onClick} className="rounded-xl border border-brand-300 bg-white px-4 py-3.5 text-left text-base font-medium text-brand-950">
             {o.etiqueta}
           </button>
         ))}

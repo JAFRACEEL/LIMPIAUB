@@ -225,23 +225,33 @@ export function interpretar(texto: string): Interpretacion {
     return { estado: 'desconocido', alternativas }
   }
 
-  // Reglas que por naturaleza piden aclarar (p. ej. hongo en la pared).
-  if (mejor.regla.aclarar) {
+  // Varias reglas del mismo servicio suman ("grifo" + "gotea" = gasfitería), para que una sola
+  // palabra de peso alto (humedad) no tape lo demás que dijo el cliente.
+  const totales = new Map<string, number>()
+  for (const c of candidatos) totales.set(c.regla.servicioId, (totales.get(c.regla.servicioId) ?? 0) + c.puntos)
+  const ranking = [...totales.entries()].sort((a, b) => b[1] - a[1])
+  const lider = candidatos.find((c) => c.regla.servicioId === ranking[0][0]) ?? mejor
+  const puntosLider = ranking[0][1]
+  const rival = ranking[1] ? candidatos.find((c) => c.regla.servicioId === ranking[1][0]) : undefined
+  const puntosRival = ranking[1]?.[1] ?? 0
+  const hayRival = !!rival && puntosRival >= puntosLider * 0.7
+
+  // Reglas que por naturaleza piden aclarar (p. ej. hongo en la pared), solo si nada más compite.
+  if (lider.regla.aclarar && !hayRival) {
     return {
       estado: 'aclarar',
-      pregunta: mejor.regla.aclarar.pregunta,
-      opciones: mejor.regla.aclarar.opciones,
+      pregunta: lider.regla.aclarar.pregunta,
+      opciones: lider.regla.aclarar.opciones,
       alternativas,
     }
   }
 
   // Dos servicios distintos con puntaje parecido: preguntar en vez de adivinar.
-  const otro = candidatos.find((c) => c.regla.servicioId !== mejor.regla.servicioId)
-  if (otro && otro.puntos >= mejor.puntos * 0.7) {
+  if (rival && hayRival) {
     return {
       estado: 'ambiguo',
       pregunta: '¿Cuál se parece más a lo que necesitas?',
-      opciones: [mejor, otro].map((c) => ({
+      opciones: [lider, rival].map((c) => ({
         servicioId: c.regla.servicioId,
         etiqueta: ETIQUETA_SERVICIO_CORTA[c.regla.servicioId] ?? c.regla.servicioId,
         confirmacion: c.regla.confirmacion,
@@ -252,9 +262,9 @@ export function interpretar(texto: string): Interpretacion {
 
   return {
     estado: 'claro',
-    servicioId: mejor.regla.servicioId,
-    confirmacion: mejor.regla.confirmacion,
-    modalidadSugerida: mejor.regla.modalidadSugerida,
+    servicioId: lider.regla.servicioId,
+    confirmacion: lider.regla.confirmacion,
+    modalidadSugerida: lider.regla.modalidadSugerida,
     alternativas,
   }
 }

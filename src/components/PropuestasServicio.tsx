@@ -77,7 +77,7 @@ export function PropuestasServicio({
               </div>
               <div className="shrink-0 text-right">
                 {propuesta ? (
-                  <p className="text-base font-bold text-teal-800">{formatoSoles(totalAContratar(propuesta, reserva.recargo_materiales))}</p>
+                  <p className="text-base font-bold text-brand-800">{formatoSoles(totalAContratar(propuesta, reserva.recargo_materiales))}</p>
                 ) : (
                   <p className="text-xs text-neutral-500">Sin propuesta aún</p>
                 )}
@@ -85,10 +85,10 @@ export function PropuestasServicio({
             </div>
             <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
               {perfil?.disponible_ahora && reserva.programacion === 'ahora' && (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Disponible ahora</span>
+                <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-800">Disponible ahora</span>
               )}
               {reserva.programacion === 'programada' && (
-                <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700">Libre en tu horario</span>
+                <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-800">Libre en tu horario</span>
               )}
               {propuesta && <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-neutral-600">{ETIQUETA_MODALIDAD[propuesta.modalidad]}</span>}
             </div>
@@ -98,7 +98,7 @@ export function PropuestasServicio({
                   type="button"
                   onClick={() => setAbierta(expandida ? null : id)}
                   aria-expanded={expandida}
-                  className="mt-3 w-full rounded-xl border border-teal-700 px-4 py-3 text-sm font-semibold text-teal-800"
+                  className="mt-3 w-full rounded-xl border border-brand-700 px-4 py-3 text-sm font-semibold text-brand-800"
                 >
                   {expandida ? 'Ocultar propuesta' : 'Ver propuesta'}
                 </button>
@@ -163,7 +163,7 @@ function SinRespuesta({ reserva, onCambio }: { reserva: Reserva; onCambio: () =>
                   : { programacion: 'programada', fecha: reserva.fecha, hora: reserva.hora.slice(0, 5) },
               )
             }
-            className="rounded-xl bg-teal-700 px-3 py-3 font-semibold text-white disabled:opacity-60"
+            className="rounded-xl bg-brand-700 px-3 py-3 font-semibold text-white disabled:opacity-60"
           >
             {trabajando ? 'Enviando…' : 'Volver a intentar'}
           </button>
@@ -188,7 +188,7 @@ function SinRespuesta({ reserva, onCambio }: { reserva: Reserva; onCambio: () =>
               type="button"
               disabled={trabajando || !fecha || !hora}
               onClick={() => reintentar({ programacion: 'programada', fecha, hora })}
-              className="rounded-xl bg-teal-700 px-3 py-3 font-semibold text-white disabled:opacity-60"
+              className="rounded-xl bg-brand-700 px-3 py-3 font-semibold text-white disabled:opacity-60"
             >
               Enviar de nuevo
             </button>

@@ -66,11 +66,11 @@ describe('desglose de lo aceptado', () => {
 })
 
 describe('datos de cobro', () => {
-  it('si Limpi aún no cargó sus datos reales, no se simula un pago', () => {
+  it('si YAVI aún no cargó sus datos reales, no se simula un pago', () => {
     expect(datosPagoDisponibles('yape')).toBe(false)
     expect(datosPagoDisponibles('transferencia')).toBe(false)
   })
-  it('el efectivo no depende de datos de Limpi', () => {
+  it('el efectivo no depende de datos de YAVI', () => {
     expect(datosPagoDisponibles('efectivo')).toBe(true)
   })
 })

@@ -79,7 +79,7 @@ export function PropuestaTarjeta({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-teal-200 bg-white p-4">
+    <div className="flex flex-col gap-3 rounded-2xl border border-brand-200 bg-white p-4">
       <div>
         <p className="font-semibold text-neutral-900">
           {TITULO[propuesta.tipo]}
@@ -113,11 +113,11 @@ export function PropuestaTarjeta({
       {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
       {!confirmando ? (
-        <div className={contratar ? '' : 'grid grid-cols-2 gap-2'}>
+        <div className={contratar ? '' : 'grid gap-2 sm:grid-cols-2'}>
           <button
             type="button"
             onClick={() => setConfirmando(true)}
-            className="w-full rounded-xl bg-teal-700 px-4 py-3.5 text-base font-semibold text-white"
+            className="w-full rounded-xl bg-brand-700 px-4 py-3.5 text-base font-semibold text-white"
           >
             {contratar ? `Contratar por ${formatoSoles(desglose.total)}` : `Aceptar ${formatoSoles(desglose.total)}`}
           </button>
@@ -133,14 +133,14 @@ export function PropuestaTarjeta({
           )}
         </div>
       ) : (
-        <div className="rounded-xl border border-teal-300 bg-teal-50 p-3">
-          <p className="text-sm text-teal-950">
+        <div className="rounded-xl border border-brand-300 bg-brand-50 p-3">
+          <p className="text-sm text-brand-950">
             {contratar
               ? `Vas a contratar${nombre ? ` a ${nombre.split(' ')[0]}` : ''} por ${formatoSoles(desglose.total)}. Aceptas este precio, lo que incluye y las condiciones. Cualquier cambio necesitará tu aprobación.`
               : `Aceptas ${formatoSoles(desglose.total)} más al total del servicio.`}
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" disabled={trabajando} onClick={aceptar} className="rounded-xl bg-teal-700 px-3 py-3 text-sm font-semibold text-white disabled:opacity-60">
+            <button type="button" disabled={trabajando} onClick={aceptar} className="rounded-xl bg-brand-700 px-3 py-3 text-sm font-semibold text-white disabled:opacity-60">
               {trabajando ? 'Confirmando…' : 'Sí, confirmar'}
             </button>
             <button type="button" disabled={trabajando} onClick={() => setConfirmando(false)} className="rounded-xl border border-neutral-300 bg-white px-3 py-3 text-sm font-semibold text-neutral-700">

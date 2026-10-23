@@ -240,7 +240,7 @@ export function MisReservas() {
           <div className="mt-2 flex flex-col gap-2">
             <input value={nuevaDireccion} onChange={(e) => setNuevaDireccion(e.target.value)} className="input" placeholder="Jirón / calle, número, referencia" />
             <div className="flex gap-2">
-              <button disabled={guardandoDireccion} onClick={() => guardarDireccion(r.id)} className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              <button disabled={guardandoDireccion} onClick={() => guardarDireccion(r.id)} className="flex-1 rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
                 Guardar dirección
               </button>
               <button onClick={() => setEditandoDireccion(null)} className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm font-semibold text-neutral-700">
@@ -252,7 +252,7 @@ export function MisReservas() {
           <div className="mt-1 flex items-center justify-between gap-2">
             <p className="min-w-0 truncate text-sm text-neutral-700">{r.direccion}</p>
             {['solicitada', 'aceptada', 'en_curso'].includes(r.estado) && (
-              <button onClick={() => empezarEdicionDireccion(r)} className="shrink-0 text-xs font-semibold text-teal-700">
+              <button onClick={() => empezarEdicionDireccion(r)} className="shrink-0 text-xs font-semibold text-brand-700">
                 Cambiar dirección
               </button>
             )}
@@ -261,7 +261,7 @@ export function MisReservas() {
 
         {desglose && (
           <details className="mt-3">
-            <summary className="cursor-pointer text-sm font-semibold text-teal-800">
+            <summary className="cursor-pointer text-sm font-semibold text-brand-800">
               Total: S/ {desglose.total.toFixed(2)} · ver detalle del precio
             </summary>
             <div className="mt-2">
@@ -270,7 +270,7 @@ export function MisReservas() {
           </details>
         )}
         {!desglose && r.total != null && r.estado !== 'solicitada' && (
-          <p className="mt-2 text-sm font-semibold text-teal-700">Total: S/ {(r.total_cliente ?? r.total).toFixed(2)}</p>
+          <p className="mt-2 text-sm font-semibold text-brand-700">Total: S/ {(r.total_cliente ?? r.total).toFixed(2)}</p>
         )}
 
         {contacto && (
@@ -282,10 +282,10 @@ export function MisReservas() {
             </div>
             {['aceptada', 'en_camino', 'en_curso', 'completada'].includes(r.estado) && (
               <a
-                href={whatsappUrl(contacto.telefono, `Hola ${contacto.nombre}, te escribo por mi servicio de Limpi (${r.servicio}).`)}
+                href={whatsappUrl(contacto.telefono, `Hola ${contacto.nombre}, te escribo por mi servicio de YAVI (${r.servicio}).`)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="shrink-0 rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white"
+                className="shrink-0 rounded-lg bg-green-700 px-3 py-2 text-xs font-semibold text-white"
               >
                 WhatsApp
               </a>
@@ -299,7 +299,7 @@ export function MisReservas() {
               ? 'El profesional no respondió a tiempo. Puedes cancelar este pedido y pedirlo de nuevo, a él o a otros profesionales.'
               : 'Esperando la respuesta del profesional (tiene 15 minutos).'}{' '}
             {r.ventana_cierra_en && new Date(r.ventana_cierra_en).getTime() < Date.now() && (
-              <Link to="/pedir" className="font-semibold text-teal-700 underline">
+              <Link to="/pedir" className="font-semibold text-brand-700 underline">
                 Pedir de nuevo
               </Link>
             )}
@@ -307,8 +307,8 @@ export function MisReservas() {
         )}
 
         {contacto && r.estado === 'en_camino' && (
-          <div className="mt-3 rounded-xl border border-teal-200 bg-teal-50 p-2">
-            <p className="px-1 pb-1 text-sm font-medium text-teal-800">🚗 {contacto.nombre.split(' ')[0]} va en camino</p>
+          <div className="mt-3 rounded-xl border border-brand-200 bg-brand-50 p-2">
+            <p className="px-1 pb-1 text-sm font-medium text-brand-800">🚗 {contacto.nombre.split(' ')[0]} va en camino</p>
             {r.ubicacion_lat != null && r.ubicacion_lng != null ? (
               <LimiteMapa
                 alternativa={
@@ -316,20 +316,20 @@ export function MisReservas() {
                     href={`https://www.google.com/maps?q=${r.ubicacion_lat},${r.ubicacion_lng}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block px-1 pb-1 text-xs font-semibold text-teal-800 underline"
+                    className="block px-1 pb-1 text-xs font-semibold text-brand-800 underline"
                   >
                     No pudimos cargar el mapa. Ver ubicación en Google Maps
                   </a>
                 }
               >
-                <Suspense fallback={<div className="h-56 w-full animate-pulse rounded-xl bg-teal-100" />}>
+                <Suspense fallback={<div className="h-56 w-full animate-pulse rounded-xl bg-brand-100" />}>
                   <MapaSeguimiento lat={r.ubicacion_lat} lng={r.ubicacion_lng} nombre={contacto.nombre} />
                 </Suspense>
               </LimiteMapa>
             ) : (
-              <p className="px-1 pb-1 text-xs text-teal-700">Esperando su ubicación…</p>
+              <p className="px-1 pb-1 text-xs text-brand-700">Esperando su ubicación…</p>
             )}
-            <div className="flex flex-wrap gap-x-3 px-1 pt-1 text-xs text-teal-700">
+            <div className="flex flex-wrap gap-x-3 px-1 pt-1 text-xs text-brand-700">
               {r.hora_llegada && (
                 <span>Llegó a las {new Date(r.hora_llegada).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>
               )}
@@ -352,11 +352,11 @@ export function MisReservas() {
               href={whatsappUrl(contacto.telefono, `Hola ${contacto.nombre}, aquí te comparto mi ubicación en vivo para que me encuentres más fácil 📍`)}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-3 block rounded-lg border border-green-600 px-3 py-2.5 text-center text-xs font-semibold text-green-700"
+              className="mt-3 block rounded-lg border border-green-700 px-3 py-2.5 text-center text-xs font-semibold text-green-800"
             >
               📍 Enviar mi ubicación en vivo por WhatsApp
             </a>
-            <p className="mt-1 text-center text-[11px] text-neutral-400">En WhatsApp, toca el clip 📎 → Ubicación → Compartir ubicación en tiempo real</p>
+            <p className="mt-1 text-center text-[11px] text-neutral-500">En WhatsApp, toca el clip 📎 → Ubicación → Compartir ubicación en tiempo real</p>
           </>
         )}
 
@@ -427,7 +427,7 @@ export function MisReservas() {
       {reservas.length === 0 ? (
         <div className="rounded-2xl bg-neutral-100 px-4 py-8 text-center">
           <p className="text-sm text-neutral-600">Todavía no has pedido ningún servicio.</p>
-          <Link to="/" className="mt-3 inline-block rounded-xl bg-teal-700 px-5 py-3 text-sm font-semibold text-white">
+          <Link to="/" className="mt-3 inline-block rounded-xl bg-brand-700 px-5 py-3 text-sm font-semibold text-white">
             Contar qué necesito
           </Link>
         </div>

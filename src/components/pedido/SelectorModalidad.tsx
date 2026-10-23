@@ -34,7 +34,7 @@ export function SelectorModalidad({
             <label
               key={m}
               className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 ${
-                valor === m ? 'border-teal-700 bg-teal-50' : 'border-neutral-300 bg-white'
+                valor === m ? 'border-brand-700 bg-brand-50' : 'border-neutral-300 bg-white'
               }`}
             >
               <input
@@ -42,7 +42,7 @@ export function SelectorModalidad({
                 name="modalidad"
                 checked={valor === m}
                 onChange={() => onChange(m)}
-                className="mt-1 h-4 w-4 accent-teal-700"
+                className="mt-1 h-4 w-4 accent-brand-700"
               />
               <span>
                 <span className="block text-sm font-semibold text-neutral-900">{texto.titulo}</span>

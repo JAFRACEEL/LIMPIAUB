@@ -44,7 +44,7 @@ export function FormularioCalificacion({
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-3">
       <p className="mb-2 text-sm font-medium">Califica este servicio</p>
-      <div className="mb-2 flex gap-1 text-2xl text-amber-500">
+      <div className="mb-2 flex gap-1 text-2xl text-amber-600">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -68,7 +68,7 @@ export function FormularioCalificacion({
         type="button"
         disabled={enviando}
         onClick={enviar}
-        className="mt-2 w-full rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="mt-2 w-full rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
       >
         {enviando ? 'Enviando…' : 'Enviar calificación'}
       </button>

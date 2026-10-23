@@ -51,7 +51,7 @@ export function Buscar() {
         <h1 className="text-2xl font-bold">Profesionales</h1>
         <Link
           to="/pedir"
-          className="shrink-0 rounded-xl bg-teal-700 px-3 py-2 text-sm font-semibold text-white"
+          className="shrink-0 rounded-xl bg-brand-700 px-3 py-2 text-sm font-semibold text-white"
         >
           Pedir un servicio
         </Link>
@@ -89,7 +89,7 @@ export function Buscar() {
             type="checkbox"
             checked={soloDisponibles}
             onChange={(e) => setSoloDisponibles(e.target.checked)}
-            className="h-4 w-4 accent-teal-700"
+            className="h-4 w-4 accent-brand-700"
           />
           Solo disponibles ahora
         </label>
@@ -124,14 +124,14 @@ export function Buscar() {
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate font-semibold">{t.nombre}</p>
                     {t.disponible_ahora && (
-                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                      <span className="shrink-0 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
                         Disponible ahora
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-neutral-500">{t.zonas.join(' · ')}</p>
                   <Estrellas promedio={t.rating_avg} cantidad={t.rating_n} />
-                  <p className="mt-1 text-sm font-semibold text-teal-700">
+                  <p className="mt-1 text-sm font-semibold text-brand-700">
                     S/ {t.tarifa_hora.toFixed(2)} / hora
                   </p>
                   <p className="truncate text-xs text-neutral-500">{t.servicios.join(' · ')}</p>

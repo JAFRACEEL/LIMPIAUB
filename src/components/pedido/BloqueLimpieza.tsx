@@ -28,10 +28,10 @@ function Chip({ activo, onClick, children, numero }: { activo: boolean; onClick:
       onClick={onClick}
       aria-pressed={activo}
       className={`rounded-full border px-3 py-2 text-left text-sm ${
-        activo ? 'border-teal-700 bg-teal-50 font-semibold text-teal-900' : 'border-neutral-300 bg-white text-neutral-700'
+        activo ? 'border-brand-700 bg-brand-50 font-semibold text-brand-900' : 'border-neutral-300 bg-white text-neutral-700'
       }`}
     >
-      {numero ? <span className="mr-1.5 inline-block h-5 w-5 rounded-full bg-teal-700 text-center text-xs leading-5 text-white">{numero}</span> : null}
+      {numero ? <span className="mr-1.5 inline-block h-5 w-5 rounded-full bg-brand-700 text-center text-xs leading-5 text-white">{numero}</span> : null}
       {children}
     </button>
   )
@@ -88,7 +88,7 @@ export function BloqueLimpieza({
               aria-pressed={datos.alcance === a}
               onClick={() => onChange({ ...datos, alcance: a, tareas: [] })}
               className={`min-h-14 rounded-xl border px-2 py-2 text-sm ${
-                datos.alcance === a ? 'border-teal-700 bg-teal-50 font-semibold text-teal-900' : 'border-neutral-300 bg-white text-neutral-700'
+                datos.alcance === a ? 'border-brand-700 bg-brand-50 font-semibold text-brand-900' : 'border-neutral-300 bg-white text-neutral-700'
               }`}
             >
               {ETIQUETA_ALCANCE[a]}
@@ -169,7 +169,7 @@ export function BloqueLimpieza({
                     name="estado_limpieza"
                     checked={(datos.estado ?? 'normal') === e}
                     onChange={() => onChange({ ...datos, estado: e })}
-                    className="h-4 w-4 accent-teal-700"
+                    className="h-4 w-4 accent-brand-700"
                   />
                   {ETIQUETA_ESTADO[e]}
                 </label>
@@ -187,7 +187,7 @@ export function BloqueLimpieza({
           type="checkbox"
           checked={datos.reorganizar}
           onChange={(e) => onChange({ ...datos, reorganizar: e.target.checked })}
-          className="mt-0.5 h-4 w-4 accent-teal-700"
+          className="mt-0.5 h-4 w-4 accent-brand-700"
         />
         <span>
           <span className="font-medium">También quiero que reorganicen mis pertenencias</span>

@@ -27,7 +27,7 @@ export function EtiquetaPago({ estado }: { estado: ResumenPago['estado'] }) {
 
 /**
  * Pago manual. Registrar el pago NO lo confirma: queda "pendiente de verificación" hasta que un
- * administrador lo revise. Si Limpi aún no cargó sus datos de cobro, se dice y no se simula el pago.
+ * administrador lo revise. Si YAVI aún no cargó sus datos de cobro, se dice y no se simula el pago.
  */
 export function PagoReserva({
   reservaId,
@@ -110,7 +110,7 @@ export function PagoReserva({
             <p className="mt-2 text-neutral-600">Falta registrar {formatoSoles(resumen.saldo)} (por cargos aceptados después).</p>
           )}
           {!abierto ? (
-            <button type="button" onClick={() => setAbierto(true)} className="mt-3 w-full rounded-xl border border-teal-700 px-4 py-3 font-semibold text-teal-800">
+            <button type="button" onClick={() => setAbierto(true)} className="mt-3 w-full rounded-xl border border-brand-700 px-4 py-3 font-semibold text-brand-800">
               Registrar mi pago de {formatoSoles(resumen.saldo)}
             </button>
           ) : (
@@ -138,7 +138,7 @@ export function PagoReserva({
                   <p>{DATOS_PAGO[metodo]}</p>
                 </div>
               )}
-              {metodo === 'efectivo' && <p className="rounded-lg bg-white px-3 py-2 text-neutral-700">Pagas en efectivo al profesional al terminar. Limpi lo verificará.</p>}
+              {metodo === 'efectivo' && <p className="rounded-lg bg-white px-3 py-2 text-neutral-700">Pagas en efectivo al profesional al terminar. YAVI lo verificará.</p>}
 
               {metodo && (metodo === 'efectivo' || hayDatos) && (
                 <>
@@ -155,7 +155,7 @@ export function PagoReserva({
                     </>
                   )}
                   <p className="text-xs text-neutral-500">Esto no confirma tu pago: queda pendiente hasta que lo verifiquemos.</p>
-                  <button type="button" disabled={enviando} onClick={registrar} className="rounded-xl bg-teal-700 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-60">
+                  <button type="button" disabled={enviando} onClick={registrar} className="rounded-xl bg-brand-700 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-60">
                     {enviando ? 'Registrando…' : 'Registrar pago'}
                   </button>
                 </>

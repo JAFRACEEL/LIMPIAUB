@@ -1,19 +1,215 @@
 @import "tailwindcss";
 
+/*
+ * Sistema de diseño YAVI (claymorphism moderado).
+ * Todo el color, el radio y la sombra salen de estos tokens: las clases de Tailwind que ya usa la
+ * app (brand-*, neutral-*, rounded-*, shadow-*) heredan el estilo sin tocar cada pantalla.
+ */
+@theme {
+  /* Naranja YAVI (principal). El 700 cumple contraste con texto blanco; el 500 es el naranja del logo. */
+  --color-brand-50: #fff5ec;
+  --color-brand-100: #ffe7d1;
+  --color-brand-200: #ffcca3;
+  --color-brand-300: #ffab68;
+  --color-brand-400: #ff8a35;
+  --color-brand-500: #ff7414;
+  --color-brand-600: #e9590a;
+  --color-brand-700: #c2410c;
+  --color-brand-800: #9a3412;
+  --color-brand-900: #7c2d12;
+  --color-brand-950: #431407;
+  /* Tinta oscura cálida para texto sobre el naranja claro (cumple AA). */
+  --color-brand-ink: #3b0f03;
+
+  /* Azul profundo YAVI (secundario): títulos de apoyo, datos, estados informativos. */
+  --color-navy-50: #eef4ff;
+  --color-navy-100: #dbe7ff;
+  --color-navy-200: #b9cffb;
+  --color-navy-300: #8badf0;
+  --color-navy-400: #5b84dc;
+  --color-navy-500: #2f5fc0;
+  --color-navy-600: #1c4aa6;
+  --color-navy-700: #123b8c;
+  --color-navy-800: #0d2f72;
+  --color-navy-900: #0a2358;
+  --color-navy-950: #061538;
+
+  /* Neutros cálidos (piedra) para fondos y texto. */
+  --color-neutral-50: #fcf8f4;
+  --color-neutral-100: #f6f1ec;
+  --color-neutral-200: #ebe4dd;
+  --color-neutral-300: #d9cfc6;
+  --color-neutral-400: #a99f95;
+  --color-neutral-500: #706860;
+  --color-neutral-600: #57504a;
+  --color-neutral-700: #44403c;
+  --color-neutral-800: #292524;
+  --color-neutral-900: #1c1917;
+  --color-neutral-950: #0c0a09;
+
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+
+  /* Volumen suave: sombra difusa tibia + reflejo interior arriba. */
+  --shadow-xs: 0 1px 2px rgb(120 53 15 / 0.08);
+  --shadow-sm: 0 6px 14px -6px rgb(120 53 15 / 0.2), inset 0 1.5px 0 rgb(255 255 255 / 0.9);
+  --shadow-md: 0 10px 22px -8px rgb(120 53 15 / 0.24), inset 0 1.5px 0 rgb(255 255 255 / 0.9);
+  --shadow-lg: 0 16px 32px -10px rgb(120 53 15 / 0.28), inset 0 2px 0 rgb(255 255 255 / 0.9);
+  --shadow-xl: 0 22px 44px -12px rgb(120 53 15 / 0.32), inset 0 2px 0 rgb(255 255 255 / 0.9);
+
+  --font-sans: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
 :root {
   color-scheme: light;
+  --yavi-lienzo: #fffaf5;
+  --yavi-foco: rgb(233 89 10 / 0.6);
+  --yavi-borde: rgb(120 53 15 / 0.12);
+  --yavi-clay-boton: linear-gradient(180deg, #ff8a2b 0%, #ec5f10 100%);
+  --yavi-clay-boton-sombra: 0 10px 18px -8px rgb(233 89 10 / 0.6), inset 0 2px 0 rgb(255 255 255 / 0.32), inset 0 -3px 0 rgb(0 0 0 / 0.14);
+  --yavi-clay-campo: inset 0 2px 5px rgb(120 53 15 / 0.09);
 }
 
 body {
-  @apply bg-neutral-50 text-neutral-900 antialiased;
+  @apply text-neutral-900 antialiased;
+  background: radial-gradient(120% 50% at 50% -8%, #ffeedd 0%, var(--yavi-lienzo) 58%) fixed;
+  min-height: 100dvh;
 }
 
-input,
+h1,
+h2,
+h3 {
+  letter-spacing: -0.01em;
+}
+
+/* Foco visible en todo lo interactivo. */
+:where(a, button, summary, [role='button'], [tabindex]):focus-visible,
+:where(input, select, textarea):focus-visible {
+  outline: 3px solid var(--yavi-foco);
+  outline-offset: 2px;
+}
+
+/* Campos: hundidos, como arcilla presionada. */
+input:not([type='checkbox'], [type='radio'], [type='range']),
 select,
 textarea {
-  @apply outline-none;
+  background-color: #fff;
+  box-shadow: var(--yavi-clay-campo);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: var(--color-neutral-100);
+  color: var(--color-neutral-500);
+  cursor: not-allowed;
 }
 
 .input {
-  @apply rounded-xl border border-neutral-300 bg-white px-4 py-3 text-base focus:border-teal-600;
+  @apply rounded-2xl border border-neutral-300 bg-white px-4 py-3 text-base focus:border-brand-600;
 }
+
+/*
+ * Botón principal: todo elemento con bg-brand-700 se vuelve naranja cálido de arcilla.
+ * El texto pasa a la tinta oscura cálida (--color-brand-ink): sobre #ff8a2b..#ec5f10 da 7.1..4.95:1 (AA).
+ * El blanco sobre ese naranja daría solo 2.4..3.4:1, por eso no se usa.
+ */
+.bg-brand-700 {
+  background-image: var(--yavi-clay-boton);
+  color: var(--color-brand-ink);
+}
+:is(button, a, label).bg-brand-700:not(:disabled, [aria-disabled='true']) {
+  box-shadow: var(--yavi-clay-boton-sombra);
+}
+
+/* Pulsación y deshabilitado para todos los botones. */
+button {
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background-color 120ms ease;
+}
+button:not(:disabled):active {
+  transform: translateY(1px) scale(0.985);
+}
+button:disabled {
+  cursor: not-allowed;
+}
+
+@layer components {
+  /* Tarjeta de arcilla: superficie blanca con volumen. */
+  .yavi-tarjeta {
+    @apply rounded-2xl border bg-white shadow-md;
+    border-color: var(--yavi-borde);
+  }
+
+  /* Mosaico de categoría: la pieza más expresiva del sistema. */
+  .yavi-categoria {
+    @apply relative flex min-h-28 flex-col items-start justify-between gap-3 rounded-3xl border bg-white p-4 text-left shadow-lg;
+    border-color: var(--yavi-borde);
+    background-image: linear-gradient(180deg, #ffffff 0%, #fff6ee 100%);
+  }
+  .yavi-categoria[aria-disabled='true'] {
+    @apply border-dashed bg-neutral-100 text-neutral-500 shadow-none;
+    background-image: none;
+  }
+
+  /* Burbuja del ícono de una categoría. */
+  .yavi-burbuja {
+    @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white;
+    background-image: linear-gradient(145deg, #ff8a35 0%, #e9590a 100%);
+    box-shadow: 0 8px 14px -6px rgb(194 65 12 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.4), inset 0 -3px 0 rgb(0 0 0 / 0.12);
+  }
+  .yavi-burbuja[data-tono='azul'] {
+    background-image: linear-gradient(145deg, #2f5fc0 0%, #0d2f72 100%);
+    box-shadow: 0 8px 14px -6px rgb(13 47 114 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.3), inset 0 -3px 0 rgb(0 0 0 / 0.16);
+  }
+  .yavi-categoria[aria-disabled='true'] .yavi-burbuja {
+    background-image: none;
+    @apply bg-neutral-300 text-neutral-500 shadow-none;
+  }
+
+  /* Botón secundario (borde y fondo claros). */
+  .yavi-boton-secundario {
+    @apply rounded-2xl border border-neutral-300 bg-white px-4 py-3 text-sm font-semibold text-navy-800 shadow-sm;
+  }
+
+  /* Avisos de estado. */
+  .yavi-aviso {
+    @apply rounded-2xl border px-4 py-3 text-sm;
+  }
+  .yavi-aviso[data-tipo='info'] {
+    @apply border-navy-200 bg-navy-50 text-navy-900;
+  }
+  .yavi-aviso[data-tipo='exito'] {
+    @apply border-green-200 bg-green-50 text-green-900;
+  }
+  .yavi-aviso[data-tipo='alerta'] {
+    @apply border-amber-200 bg-amber-50 text-amber-900;
+  }
+  .yavi-aviso[data-tipo='error'] {
+    @apply border-red-200 bg-red-50 text-red-800;
+  }
+
+  /* Carga: esqueleto pulsante y giro. */
+  .yavi-esqueleto {
+    @apply animate-pulse rounded-2xl bg-neutral-200/80;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  button:not(:disabled):active {
+    transform: none;
+  }
+}
+

@@ -102,10 +102,10 @@ export function inicioMesLima(): string {
   return `${fechaHoyLima().slice(0, 7)}-01`
 }
 
-// TODO: reemplazar con los datos reales de pago de Limpi.
+// TODO: reemplazar con los datos reales de pago de YAVI.
 export const DATOS_PAGO: Record<'yape' | 'plin' | 'transferencia', string> = {
-  yape: '(pendiente: agrega aquí el número de Yape de Limpi)',
-  plin: '(pendiente: agrega aquí el número de Plin de Limpi)',
+  yape: '(pendiente: agrega aquí el número de Yape de YAVI)',
+  plin: '(pendiente: agrega aquí el número de Plin de YAVI)',
   transferencia: '(pendiente: agrega aquí banco, número de cuenta/CCI y titular)',
 }
 

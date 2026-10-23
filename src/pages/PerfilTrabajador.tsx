@@ -58,7 +58,7 @@ export function PerfilTrabajador() {
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
           {error ?? 'No encontramos a este profesional, o ya no está disponible.'}
         </p>
-        <Link to="/buscar" className="mt-4 inline-block text-sm font-semibold text-teal-700">
+        <Link to="/buscar" className="mt-4 inline-block text-sm font-semibold text-brand-700">
           Volver a buscar
         </Link>
       </div>
@@ -78,14 +78,14 @@ export function PerfilTrabajador() {
           <p className="text-sm text-neutral-500">{trabajador.zonas.join(' · ')}</p>
           <Estrellas promedio={trabajador.rating_avg} cantidad={trabajador.rating_n} />
           {trabajador.disponible_ahora && (
-            <span className="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+            <span className="mt-1 inline-block rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
               Disponible ahora
             </span>
           )}
         </div>
       </div>
 
-      <p className="mt-4 text-lg font-semibold text-teal-700">S/ {trabajador.tarifa_hora.toFixed(2)} / hora</p>
+      <p className="mt-4 text-lg font-semibold text-brand-700">S/ {trabajador.tarifa_hora.toFixed(2)} / hora</p>
       <p className="mt-1 text-sm text-neutral-500">{trabajador.trabajos_completados} trabajos completados</p>
 
       {trabajador.descripcion && <p className="mt-4 text-sm text-neutral-700">{trabajador.descripcion}</p>}
@@ -100,7 +100,7 @@ export function PerfilTrabajador() {
 
       <Link
         to={`/pedir?trabajador=${trabajador.id}`}
-        className="mt-6 block rounded-xl bg-teal-700 px-4 py-3 text-center font-semibold text-white"
+        className="mt-6 block rounded-xl bg-brand-700 px-4 py-3 text-center font-semibold text-white"
       >
         Pedir a {trabajador.nombre.split(' ')[0]}
       </Link>
@@ -114,7 +114,7 @@ export function PerfilTrabajador() {
             <li key={c.id} className="rounded-xl border border-neutral-200 bg-white p-3">
               <div className="flex items-center justify-between">
                 <Estrellas promedio={c.estrellas} cantidad={1} />
-                <span className="text-xs text-neutral-400">
+                <span className="text-xs text-neutral-500">
                   {new Date(c.creado_en).toLocaleDateString('es-PE')}
                 </span>
               </div>

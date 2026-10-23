@@ -61,7 +61,7 @@ export function desgloseAceptado(reserva: Pick<Reserva, 'recargo_materiales'>, p
   })
 }
 
-/** ¿Hay datos reales de cobro para este método? El efectivo no necesita datos de Limpi. */
+/** ¿Hay datos reales de cobro para este método? El efectivo no necesita datos de YAVI. */
 export function datosPagoDisponibles(metodo: 'yape' | 'plin' | 'transferencia' | 'efectivo'): boolean {
   if (metodo === 'efectivo') return true
   return !DATOS_PAGO[metodo].trimStart().startsWith('(pendiente')

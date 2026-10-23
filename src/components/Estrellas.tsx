@@ -2,7 +2,7 @@ export function Estrellas({ promedio, cantidad }: { promedio: number; cantidad: 
   const llenas = Math.round(promedio)
   return (
     <span className="inline-flex items-center gap-1 text-sm">
-      <span className="text-amber-500">
+      <span className="text-amber-600">
         {'★'.repeat(llenas)}
         {'☆'.repeat(5 - llenas)}
       </span>

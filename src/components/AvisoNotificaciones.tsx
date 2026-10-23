@@ -42,13 +42,13 @@ export function AvisoNotificaciones() {
   }
 
   return (
-    <div className="mb-4 rounded-2xl border border-teal-200 bg-teal-50 p-4">
-      <p className="font-semibold text-teal-950">¿Quieres que te avisemos?</p>
-      <p className="mt-1 text-sm text-teal-900">
+    <div className="mb-4 rounded-2xl border border-brand-200 bg-brand-50 p-4">
+      <p className="font-semibold text-brand-950">¿Quieres que te avisemos?</p>
+      <p className="mt-1 text-sm text-brand-900">
         Te mandamos un aviso cuando un profesional acepte tu pedido, vaya en camino o te envíe un presupuesto. Así no tienes que estar mirando la pantalla.
       </p>
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <button type="button" onClick={activar} disabled={trabajando} className="rounded-xl bg-teal-700 px-3 py-3 text-sm font-semibold text-white disabled:opacity-60">
+        <button type="button" onClick={activar} disabled={trabajando} className="rounded-xl bg-brand-700 px-3 py-3 text-sm font-semibold text-white disabled:opacity-60">
           {trabajando ? 'Activando…' : 'Sí, avísame'}
         </button>
         <button type="button" onClick={ahoraNo} className="rounded-xl border border-neutral-300 bg-white px-3 py-3 text-sm font-semibold text-neutral-700">

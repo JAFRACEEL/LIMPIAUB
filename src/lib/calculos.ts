@@ -4,7 +4,7 @@ export function calcularTotal(tarifaHora: number, horas: number, recargoMaterial
 
 export function calcularComision(subtotalServicio: number, comisionPct: number, recargoMateriales: number) {
   // Del recargo por materiales (S/18 cuando la trabajadora trae su kit),
-  // S/13 son fijos para ella y S/5 fijos para Limpi: la comisión por
+  // S/13 son fijos para ella y S/5 fijos para YAVI: la comisión por
   // porcentaje solo aplica sobre el servicio (tarifa × horas), no sobre ese
   // recargo.
   const comisionServicio = (subtotalServicio * comisionPct) / 100

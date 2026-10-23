@@ -1,7 +1,7 @@
 import { calcularComision } from './calculos'
 import { HORAS_MAX, HORAS_MIN, PERSONAS_MAX, type ModalidadPrecio } from './modalidades'
 
-/** Recargo de kit de limpieza (se reparte S/13 profesional + S/5 Limpi, ver calcularComision). */
+/** Recargo de kit de limpieza (se reparte S/13 profesional + S/5 YAVI, ver calcularComision). */
 export const RECARGO_KIT = 18
 
 export function redondear(n: number): number {
@@ -98,7 +98,7 @@ export function descuentoDeVisita(
   return Math.min(visita.manoObra, manoObraReparacion)
 }
 
-/** Comisión de Limpi y neto del profesional sobre un desglose (regla vigente: % sobre mano de obra). */
+/** Comisión de YAVI y neto del profesional sobre un desglose (regla vigente: % sobre mano de obra). */
 export function repartoDelDesglose(d: Desglose, comisionPct: number) {
   return calcularComision(d.baseComision, comisionPct, d.kit)
 }

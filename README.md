@@ -1,4 +1,6 @@
-# Limpi — arranque
+# YAVI — arranque
+
+**YAVI — «Servicios a tu alcance»** conecta clientes con personas que ofrecen servicios del hogar en Iquitos (limpieza, gasfitería, electricidad, pintura y más). La app se llamó «Limpi» al inicio: por eso algunos identificadores internos conservan ese nombre (paquete `limpi`, caché `limpi-v2` del service worker, claves de almacenamiento `limpi.*` y `limpi_*`, tablas y funciones de Supabase). No se renombran para no romper instalaciones ni datos. Identidad y sistema de diseño: [docs/diseno-yavi.md](docs/diseno-yavi.md).
 
 1. Crear proyecto en https://supabase.com (gratis). Región: South America (São Paulo).
 2. SQL Editor > pegar supabase/schema.sql > Run.
@@ -58,5 +60,19 @@ cerrada. Todas las migraciones (`supabase/migrations/*.sql`, incluida
 5. Prueba: entra como trabajadora, activa las notificaciones cuando la app lo
    pida (o desde el ícono 🔔 en la barra), y pide que alguien te mande un
    pedido directo. Debería sonar/vibrar y llegar la notificación aunque la
-   app esté cerrada (en iPhone, solo si instalaste Limpi en la pantalla de
+   app esté cerrada (en iPhone, solo si instalaste YAVI en la pantalla de
    inicio).
+
+## Marca e íconos de la app
+
+- Archivos oficiales (no se modifican): `brand/originales/yavi-logo-original.jpg` y `yavi-icono-original.jpg`.
+- Copias de trabajo que sirve la web: `public/brand/`. Los íconos `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` y `favicon-64.png` son solo reescalados del ícono oficial.
+- Nombre y colores de la app instalada: `public/manifest.webmanifest` y `index.html`.
+
+### Actualizar una instalación existente
+
+El service worker (`public/sw.js`) cambió de caché (`limpi-v1` → `limpi-v2`) y, al activarse, borra solo los cachés anteriores del shell. No toca la sesión, los borradores ni los datos de la persona (la sesión de Supabase vive en `localStorage`, el borrador del pedido en `sessionStorage` y lo demás en Supabase). En el navegador, la nueva marca aparece al abrir la app dos veces. **En el iPhone, el nombre y el ícono de una app ya agregada a la pantalla de inicio los fija iOS al instalarla**: para ver «YAVI» y el nuevo ícono hay que quitar el acceso directo y volver a agregarlo (Compartir > Agregar a pantalla de inicio). La sesión sigue abierta si se vuelve a entrar desde el mismo navegador.
+
+## Vista previa de pruebas (datos ficticios)
+
+`scripts/preview-yavi.ps1` compila con las variables de `.env.test.local` (proyecto de pruebas LIMPIA, nunca producción) y deja listo el despliegue de vista previa. Por defecto **solo compila y muestra el comando**; para publicar hay que pasar `-Publicar` (es una vista previa, nunca `--prod`). Detalles en [docs/diseno-yavi.md](docs/diseno-yavi.md#vista-previa-para-el-iphone).

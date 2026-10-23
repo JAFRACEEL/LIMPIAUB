@@ -15,7 +15,7 @@ const ITEMS = [
 /** Navegación principal del cliente en el celular: tres destinos, siempre a mano. */
 export function BarraInferior() {
   return (
-    <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200 bg-white/95 backdrop-blur">
+    <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200/70 bg-white/95 shadow-[0_-8px_20px_-12px_rgb(120_53_15/0.3)] backdrop-blur">
       <ul className="mx-auto flex max-w-lg">
         {ITEMS.map((item) => (
           <li key={item.a} className="flex-1">
@@ -23,15 +23,21 @@ export function BarraInferior() {
               to={item.a}
               end={item.fin}
               className={({ isActive }) =>
-                `flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-medium ${
-                  isActive ? 'text-teal-700' : 'text-neutral-500'
+                `flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs font-semibold ${
+                  isActive ? 'text-brand-700' : 'text-neutral-500'
                 }`
               }
             >
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
-                <path d={item.i} />
-              </svg>
-              {item.t}
+              {({ isActive }) => (
+                <>
+                  <span className={`flex h-8 w-14 items-center justify-center rounded-full ${isActive ? 'bg-brand-100 shadow-sm' : ''}`}>
+                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true">
+                      <path d={item.i} />
+                    </svg>
+                  </span>
+                  {item.t}
+                </>
+              )}
             </NavLink>
           </li>
         ))}

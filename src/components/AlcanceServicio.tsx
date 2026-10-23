@@ -15,7 +15,7 @@ export function AlcanceServicio({
   if (incluye.length === 0 && noIncluye.length === 0 && !(condiciones && condiciones.length > 0)) return null
   return (
     <details open={abierto} className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
-      <summary className="cursor-pointer font-medium text-teal-800">{titulo}</summary>
+      <summary className="cursor-pointer font-medium text-brand-800">{titulo}</summary>
       {incluye.length > 0 && (
         <>
           <p className="mt-3 font-medium text-neutral-700">Incluye</p>

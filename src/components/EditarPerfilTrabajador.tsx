@@ -162,7 +162,7 @@ export function EditarPerfilTrabajador({
                   type="checkbox"
                   checked={servicios.includes(s)}
                   onChange={() => alternarServicio(s)}
-                  className="h-4 w-4 accent-teal-700"
+                  className="h-4 w-4 accent-brand-700"
                 />
                 {s}
               </label>
@@ -185,7 +185,7 @@ export function EditarPerfilTrabajador({
                     checked={seleccionada}
                     disabled={deshabilitada}
                     onChange={() => alternarZona(z)}
-                    className="h-4 w-4 accent-teal-700"
+                    className="h-4 w-4 accent-brand-700"
                   />
                   {z}
                 </label>
@@ -247,7 +247,7 @@ export function EditarPerfilTrabajador({
             type="button"
             disabled={enviando}
             onClick={guardar}
-            className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="flex-1 rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {enviando ? 'Guardando…' : 'Guardar cambios'}
           </button>

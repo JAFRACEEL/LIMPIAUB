@@ -347,7 +347,7 @@ export function Admin() {
                     <button
                       disabled={procesando === t.id}
                       onClick={() => verificar(t.id)}
-                      className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                      className="flex-1 rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                     >
                       Verificar
                     </button>
@@ -388,7 +388,7 @@ export function Admin() {
                       <button
                         disabled={procesando === t.id}
                         onClick={() => validarMigratorio(t.id)}
-                        className="flex-1 rounded-lg bg-teal-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        className="flex-1 rounded-lg bg-brand-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
                       >
                         Validar autorización
                       </button>
@@ -430,7 +430,7 @@ export function Admin() {
                   {c.telefono} · {c.zona}
                 </p>
                 {c.direccion && <p className="text-neutral-500">{c.direccion}</p>}
-                <p className="text-xs text-neutral-400">
+                <p className="text-xs text-neutral-500">
                   Registrado: {new Date(c.creado_en).toLocaleDateString('es-PE')}
                 </p>
               </li>
@@ -455,7 +455,7 @@ export function Admin() {
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
                       t.habilitado_trabajar
-                        ? 'bg-green-100 text-green-700'
+                        ? 'bg-green-100 text-green-800'
                         : t.verificacion_rechazada || t.estado_migratorio === 'rechazado'
                           ? 'bg-red-100 text-red-700'
                           : 'bg-amber-100 text-amber-700'
@@ -508,7 +508,7 @@ export function Admin() {
                 <p className="text-neutral-500">
                   Cliente: {r.perfiles?.nombre ?? '—'} · Trabajadora: {r.trabajadores?.perfiles.nombre ?? '—'}
                 </p>
-                {r.total != null && <p className="font-medium text-teal-700">Total: S/ {r.total.toFixed(2)}</p>}
+                {r.total != null && <p className="font-medium text-brand-700">Total: S/ {r.total.toFixed(2)}</p>}
               </li>
             ))}
           </ul>
@@ -645,7 +645,7 @@ function SeccionDetalle({
           {titulo}
           {cantidad != null && <span className="ml-1 font-normal text-neutral-500">({cantidad})</span>}
         </span>
-        <span className="text-sm text-teal-700">{abierto ? 'Ocultar ▲' : 'Ver detalle ▼'}</span>
+        <span className="text-sm text-brand-700">{abierto ? 'Ocultar ▲' : 'Ver detalle ▼'}</span>
       </button>
 
       {abierto && (

@@ -98,6 +98,12 @@ describe('interpretar: ambigüedad y aclaraciones', () => {
     }
   })
 
+  it('grifo que gotea con humedad se lee como gasfitería, no como pared con hongo', () => {
+    const r = interpretar('Hola, necesito que vengan a arreglar mi grifo esta que gotea y tiene una parte con humedad')
+    expect(r.estado).toBe('claro')
+    if (r.estado === 'claro') expect(r.servicioId).toBe('gasfiteria')
+  })
+
   it('no emite un diagnóstico técnico: las confirmaciones son preguntas de necesidad', () => {
     for (const t of ['pared con hongo', 'se me gotea el caño', 'no enfría el aire']) {
       const r = interpretar(t)

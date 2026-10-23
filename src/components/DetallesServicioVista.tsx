@@ -20,9 +20,9 @@ export function DetallesServicioVista({
   const respuestas = [...(detalles?.respuestas ?? []), ...(detalles?.privado ?? [])]
   if (respuestas.length === 0 && fotos.length === 0) return null
 
-  const textoSecundario = claro ? 'text-teal-100' : 'text-neutral-500'
+  const textoSecundario = claro ? 'text-brand-100' : 'text-neutral-500'
   const textoValor = claro ? 'text-white' : 'text-neutral-700'
-  const enlace = claro ? 'text-white' : 'text-teal-700'
+  const enlace = claro ? 'text-white' : 'text-brand-700'
 
   return (
     <div className="mt-1 text-sm">

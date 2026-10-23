@@ -79,7 +79,7 @@ export function PasoLugarHorario({
               aria-pressed={b.programacion === o.v}
               onClick={() => actualizar({ programacion: o.v })}
               className={`rounded-xl border px-3 py-3 text-left ${
-                b.programacion === o.v ? 'border-teal-700 bg-teal-50' : 'border-neutral-300 bg-white'
+                b.programacion === o.v ? 'border-brand-700 bg-brand-50' : 'border-neutral-300 bg-white'
               }`}
             >
               <span className="block text-sm font-semibold text-neutral-900">{o.t}</span>
@@ -120,7 +120,7 @@ export function PasoLugarHorario({
       )}
 
       <details className="rounded-xl border border-neutral-200 bg-white px-4 py-3">
-        <summary className="cursor-pointer text-sm font-medium text-teal-800">Agregar una nota (opcional)</summary>
+        <summary className="cursor-pointer text-sm font-medium text-brand-800">Agregar una nota (opcional)</summary>
         <textarea
           value={b.notas}
           onChange={(e) => actualizar({ notas: e.target.value })}

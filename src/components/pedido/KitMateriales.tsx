@@ -1,7 +1,7 @@
 import { RECARGO_KIT, formatoSoles } from '../../lib/precios'
 import type { PedidoBorrador } from '../../lib/borrador'
 
-/** "¿Tu espacio tiene materiales de limpieza?" Solo para limpieza por horas. El kit sigue en S/18 (S/13 profesional + S/5 Limpi). */
+/** "¿Tu espacio tiene materiales de limpieza?" Solo para limpieza por horas. El kit sigue en S/18 (S/13 profesional + S/5 YAVI). */
 export function KitMateriales({
   b,
   onChange,
@@ -22,7 +22,7 @@ export function KitMateriales({
             aria-pressed={b.materiales === v}
             onClick={() => onChange({ materiales: v, opcionSinMateriales: '' })}
             className={`rounded-xl border px-3 py-3 text-sm font-medium ${
-              b.materiales === v ? 'border-teal-700 bg-teal-50 text-teal-900' : 'border-neutral-300 bg-white text-neutral-700'
+              b.materiales === v ? 'border-brand-700 bg-brand-50 text-brand-900' : 'border-neutral-300 bg-white text-neutral-700'
             }`}
           >
             {v === 'si' ? 'Sí, tengo' : 'No tengo'}
@@ -39,7 +39,7 @@ export function KitMateriales({
               disabled={!puedeTraerKit}
               checked={b.opcionSinMateriales === 'trae_kit'}
               onChange={() => onChange({ opcionSinMateriales: 'trae_kit' })}
-              className="mt-0.5 h-4 w-4 accent-teal-700"
+              className="mt-0.5 h-4 w-4 accent-brand-700"
             />
             <span>
               El profesional trae su kit (+{formatoSoles(RECARGO_KIT)})
@@ -53,7 +53,7 @@ export function KitMateriales({
               name="opcionMateriales"
               checked={b.opcionSinMateriales === 'compra_kit'}
               onChange={() => onChange({ opcionSinMateriales: 'compra_kit' })}
-              className="mt-0.5 h-4 w-4 accent-teal-700"
+              className="mt-0.5 h-4 w-4 accent-brand-700"
             />
             <span>Quiero comprar un kit que quede en mi casa</span>
           </label>

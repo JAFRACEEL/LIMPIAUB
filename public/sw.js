@@ -1,8 +1,8 @@
-// Service worker mínimo: deja instalar Limpi como app y sirve el shell desde
+// Service worker mínimo: deja instalar YAVI como app y sirve el shell desde
 // caché cuando la conexión es mala (común en celulares de gama baja).
 // Bump manual de CACHE cuando cambie algo importante del shell.
-const CACHE = 'limpi-v1'
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon.svg']
+const CACHE = 'limpi-v2'
+const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/brand/icon-192.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)))
@@ -19,7 +19,7 @@ self.addEventListener('activate', (event) => {
 // Notificaciones push: el payload lo arma la Edge Function `send-push`
 // como { titulo, cuerpo, url }.
 self.addEventListener('push', (event) => {
-  let datos = { titulo: 'Limpi', cuerpo: 'Tienes una novedad en Limpi.', url: '/' }
+  let datos = { titulo: 'YAVI', cuerpo: 'Tienes una novedad en YAVI.', url: '/' }
   try {
     if (event.data) datos = { ...datos, ...event.data.json() }
   } catch {
@@ -28,15 +28,15 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(datos.titulo, {
       body: datos.cuerpo,
-      icon: '/icon.svg',
-      badge: '/icon.svg',
+      icon: '/brand/icon-192.png',
+      badge: '/brand/favicon-64.png',
       vibrate: [200, 100, 200],
       data: { url: datos.url },
     }),
   )
 })
 
-// Al tocar la notificación: si ya hay una pestaña de Limpi abierta, la
+// Al tocar la notificación: si ya hay una pestaña de YAVI abierta, la
 // enfoca y navega ahí (evita abrir una pestaña nueva encima de otra); si no,
 // abre una.
 self.addEventListener('notificationclick', (event) => {

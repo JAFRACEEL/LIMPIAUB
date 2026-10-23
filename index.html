@@ -2,20 +2,105 @@
 <html lang="es-PE">
   <head>
     <meta charset="UTF-8" />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%BC%3C/text%3E%3C/svg%3E"
-    />
+    <link rel="icon" type="image/png" href="/brand/favicon-64.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/brand/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <meta name="theme-color" content="#0f766e" />
+    <meta name="theme-color" content="#ff7414" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <title>Limpi — Limpieza doméstica en Iquitos</title>
+    <meta name="apple-mobile-web-app-title" content="YAVI" />
+    <title>YAVI — Servicios a tu alcance</title>
+    <style>
+      /* Pantalla de inicio de YAVI: está en el HTML para verse al instante, antes de que cargue la app.
+         La app la oculta con ocultarSplash() (src/lib/splash.ts). */
+      html { background: #fffaf5; }
+      #yavi-splash {
+        position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(70% 50% at 50% 46%, #ffe9d6 0%, #fffaf5 62%);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+      }
+      #yavi-splash.salir { opacity: 0; transform: scale(1.05); pointer-events: none; }
+      .ys-caja { position: relative; width: min(46vw, 220px); aspect-ratio: 1; }
+      .ys-icono {
+        position: relative; display: block; width: 100%; height: 100%; mix-blend-mode: multiply; user-select: none;
+        animation: ys-entra 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both, ys-respira 2.4s ease-in-out 1.1s infinite;
+      }
+      /* Destello que cruza el ícono (solo sobre la figura, no sobre el margen blanco). */
+      .ys-brillo { position: absolute; inset: 11%; border-radius: 23%; overflow: hidden; pointer-events: none; }
+      .ys-brillo::after {
+        content: ''; position: absolute; top: -10%; bottom: -10%; width: 45%; left: 0;
+        background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.95) 50%, transparent 100%);
+        mix-blend-mode: overlay; transform: translateX(-130%) skewX(-12deg); opacity: 0;
+        animation: ys-barrido 2.1s ease-in-out 0.7s infinite both;
+      }
+      /* Explosión: resplandor, ondas y chispas que salen del centro. */
+      .ys-res, .ys-onda, .ys-chispa, .ys-estrella { position: absolute; left: 50%; top: 50%; pointer-events: none; opacity: 0; }
+      .ys-res { width: 100%; height: 100%; margin: -50% 0 0 -50%; border-radius: 50%;
+        background: radial-gradient(circle, rgba(255, 150, 60, 0.85) 0%, rgba(255, 122, 26, 0.35) 40%, rgba(255, 122, 26, 0) 70%);
+        animation: ys-resplandor 0.9s ease-out 0.35s both; }
+      .ys-onda { width: 60%; height: 60%; margin: -30% 0 0 -30%; border-radius: 50%; border: 3px solid rgba(255, 122, 26, 0.6);
+        animation: ys-ondas 1.1s ease-out var(--t) both; }
+      .ys-chispa { width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%; background: var(--c);
+        animation: ys-vuela 0.95s cubic-bezier(0.15, 0.75, 0.25, 1) var(--t) both; }
+      .ys-estrella { width: var(--z); height: var(--z); margin: calc(var(--z) / -2) 0 0 calc(var(--z) / -2); background: var(--c);
+        clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+        animation: ys-vuela-estrella 1.15s cubic-bezier(0.15, 0.75, 0.25, 1) var(--t) both; }
+      @keyframes ys-entra {
+        0% { transform: scale(0.25) rotate(-14deg); opacity: 0; }
+        50% { transform: scale(1.14) rotate(3deg); opacity: 1; }
+        72% { transform: scale(0.96) rotate(-1deg); }
+        100% { transform: scale(1) rotate(0); opacity: 1; }
+      }
+      @keyframes ys-respira { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+      @keyframes ys-barrido { 0% { transform: translateX(-130%) skewX(-12deg); opacity: 1; } 43% { transform: translateX(330%) skewX(-12deg); opacity: 1; } 44%, 100% { transform: translateX(330%) skewX(-12deg); opacity: 0; } }
+      @keyframes ys-resplandor { 0% { transform: scale(0.3); opacity: 0.95; } 100% { transform: scale(2.3); opacity: 0; } }
+      @keyframes ys-ondas { 0% { transform: scale(1.9); opacity: 0.9; } 100% { transform: scale(3.6); opacity: 0; } }
+      @keyframes ys-vuela { 0% { transform: rotate(var(--a)) translateX(100px) scale(1); opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(0.2); opacity: 0; } }
+      @keyframes ys-vuela-estrella { 0% { transform: rotate(var(--a)) translateX(106px) scale(0.2); opacity: 1; } 55% { opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(1.1); opacity: 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        .ys-icono { animation: none; opacity: 1; }
+        .ys-brillo, .ys-res, .ys-onda, .ys-chispa, .ys-estrella { display: none; }
+        #yavi-splash { transition: opacity 0.2s ease; }
+      }
+    </style>
   </head>
   <body>
+    <div id="yavi-splash" aria-hidden="true">
+      <div class="ys-caja">
+        <span class="ys-res"></span>
+        <span class="ys-onda" style="--t: 0.4s"></span>
+        <span class="ys-onda" style="--t: 0.62s"></span>
+        <span class="ys-onda" style="--t: 0.84s"></span>
+        <span class="ys-onda" style="--t: 2s"></span>
+        <span class="ys-onda" style="--t: 2.25s"></span>
+        <!-- Chispas: --a ángulo, --d distancia, --t retardo, --c color (naranja y azul de la marca) -->
+        <span class="ys-chispa" style="--a: 0deg; --d: 150px; --t: 0.42s; --c: #ff7a1a"></span>
+        <span class="ys-chispa" style="--a: 30deg; --d: 120px; --t: 0.46s; --c: #123b8c"></span>
+        <span class="ys-chispa" style="--a: 60deg; --d: 160px; --t: 0.43s; --c: #ffa04a"></span>
+        <span class="ys-chispa" style="--a: 90deg; --d: 125px; --t: 0.47s; --c: #ff7a1a"></span>
+        <span class="ys-chispa" style="--a: 120deg; --d: 155px; --t: 0.44s; --c: #123b8c"></span>
+        <span class="ys-chispa" style="--a: 150deg; --d: 120px; --t: 0.48s; --c: #ffa04a"></span>
+        <span class="ys-chispa" style="--a: 180deg; --d: 150px; --t: 0.42s; --c: #ff7a1a"></span>
+        <span class="ys-chispa" style="--a: 210deg; --d: 125px; --t: 0.46s; --c: #123b8c"></span>
+        <span class="ys-chispa" style="--a: 240deg; --d: 160px; --t: 0.43s; --c: #ffa04a"></span>
+        <span class="ys-chispa" style="--a: 270deg; --d: 120px; --t: 0.47s; --c: #ff7a1a"></span>
+        <span class="ys-chispa" style="--a: 300deg; --d: 155px; --t: 0.44s; --c: #123b8c"></span>
+        <span class="ys-chispa" style="--a: 330deg; --d: 125px; --t: 0.48s; --c: #ffa04a"></span>
+        <!-- Estrellitas de brillo, como la de la marca -->
+        <span class="ys-estrella" style="--a: 15deg; --d: 175px; --z: 22px; --t: 0.5s; --c: #123b8c"></span>
+        <span class="ys-estrella" style="--a: 105deg; --d: 170px; --z: 18px; --t: 0.55s; --c: #ff7a1a"></span>
+        <span class="ys-estrella" style="--a: 195deg; --d: 180px; --z: 24px; --t: 0.52s; --c: #123b8c"></span>
+        <span class="ys-estrella" style="--a: 285deg; --d: 170px; --z: 18px; --t: 0.58s; --c: #ff7a1a"></span>
+        <img class="ys-icono" src="/brand/yavi-icono.jpg" width="1254" height="1254" alt="" draggable="false" />
+        <span class="ys-brillo"></span>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      // Seguro: si la app no arranca, la pantalla de inicio no se queda para siempre.
+      setTimeout(function () { var e = document.getElementById('yavi-splash'); if (e) e.remove(); }, 12000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

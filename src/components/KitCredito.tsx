@@ -177,7 +177,7 @@ export function KitCredito() {
               <button
                 disabled={procesando === t.id}
                 onClick={() => emitir(t.id)}
-                className="shrink-0 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                className="shrink-0 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
               >
                 Emitir kit
               </button>

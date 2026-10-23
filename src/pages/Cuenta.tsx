@@ -107,7 +107,7 @@ export function Cuenta() {
         {mensaje && (
           <p className={`rounded-lg px-3 py-2 text-sm ${mensaje.tipo === 'ok' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>{mensaje.texto}</p>
         )}
-        <button type="submit" disabled={guardando} className="rounded-xl bg-teal-700 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-60">
+        <button type="submit" disabled={guardando} className="rounded-xl bg-brand-700 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-60">
           {guardando ? 'Guardando…' : 'Guardar'}
         </button>
       </form>

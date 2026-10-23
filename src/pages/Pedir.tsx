@@ -224,7 +224,7 @@ export function Pedir() {
     <div className="mx-auto max-w-lg px-4 pb-32 pt-4">
       <div ref={arriba} />
       <div className="mb-4 flex items-center justify-between">
-        <button type="button" onClick={atras} className="-ml-2 rounded-lg px-2 py-2 text-sm font-semibold text-teal-800">
+        <button type="button" onClick={atras} className="-ml-2 rounded-lg px-2 py-2 text-sm font-semibold text-brand-800">
           ← Atrás
         </button>
         {b.servicioId && (
@@ -235,12 +235,12 @@ export function Pedir() {
       </div>
       {b.servicioId && (
         <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-neutral-200" aria-hidden="true">
-          <div className="h-full bg-teal-700 transition-all" style={{ width: `${(b.paso / 3) * 100}%` }} />
+          <div className="h-full bg-brand-700 transition-all" style={{ width: `${(b.paso / 3) * 100}%` }} />
         </div>
       )}
 
       {directo && (
-        <p className="mb-4 rounded-xl bg-teal-50 px-4 py-2 text-sm text-teal-900">
+        <p className="mb-4 rounded-xl bg-brand-50 px-4 py-2 text-sm text-brand-900">
           Pedido directo para <strong>{directo.nombre}</strong>. Tiene 15 minutos para responder.
         </p>
       )}
@@ -291,7 +291,7 @@ export function Pedir() {
               type="button"
               onClick={b.paso < 3 ? continuar : enviar}
               disabled={enviando}
-              className="w-full rounded-xl bg-teal-700 px-4 py-4 text-base font-semibold text-white disabled:opacity-60"
+              className="w-full rounded-xl bg-brand-700 px-4 py-4 text-base font-semibold text-white disabled:opacity-60"
             >
               {etiquetaPrincipal}
             </button>

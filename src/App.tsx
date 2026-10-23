@@ -6,6 +6,7 @@ import { RutaProtegida } from './components/RutaProtegida'
 import { useAuth } from './context/AuthContext'
 import { destinoPorRol } from './lib/rutas'
 import { notifYaDecidido } from './lib/push'
+import { ocultarSplash } from './lib/splash'
 import { Login } from './pages/Login'
 import { Registro } from './pages/Registro'
 import { RecuperarContrasena } from './pages/RecuperarContrasena'
@@ -54,10 +55,22 @@ function RedirigirReservar() {
   return <Navigate to={`/pedir${search}`} replace />
 }
 
+// Al abrir la app en "/" sin sesión, tras la pantalla de inicio se muestra Iniciar sesión (una sola vez por carga).
+let irALoginAlArrancar = window.location.pathname === '/'
+
 function App() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const { session, perfil } = useAuth()
+  const { cargando, session, perfil } = useAuth()
+
+  // La pantalla de inicio (index.html) se va cuando la app ya sabe si hay sesión.
+  useEffect(() => {
+    if (cargando) return
+    if (irALoginAlArrancar && !session && pathname === '/') navigate('/login', { replace: true })
+    irALoginAlArrancar = false
+    ocultarSplash()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargando])
 
   // Al tocar una notificación push con la app ya abierta en otra pestaña,
   // el service worker enfoca esa pestaña y nos manda a dónde navegar (una

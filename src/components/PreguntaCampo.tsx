@@ -28,7 +28,7 @@ export function PreguntaCampo({
               name={pregunta.id}
               checked={valor === opcion}
               onChange={() => onChange(opcion)}
-              className="mt-0.5 h-4 w-4 accent-teal-700"
+              className="mt-0.5 h-4 w-4 accent-brand-700"
             />
             <span>{opcion}</span>
           </label>
@@ -50,7 +50,7 @@ export function PreguntaCampo({
               onChange={(e) =>
                 onChange(e.target.checked ? [...seleccion, opcion] : seleccion.filter((o) => o !== opcion))
               }
-              className="mt-0.5 h-4 w-4 accent-teal-700"
+              className="mt-0.5 h-4 w-4 accent-brand-700"
             />
             <span>{opcion}</span>
           </label>

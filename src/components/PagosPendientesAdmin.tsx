@@ -121,9 +121,9 @@ export function PagosPendientesAdmin() {
                 {pago.referencia ? ` · Operación ${pago.referencia}` : ''}
                 {totalReserva != null && Math.abs(totalReserva - pago.monto) > 0.009 ? ` · Total del servicio ${formatoSoles(totalReserva)}` : ''}
               </p>
-              <p className="text-xs text-neutral-400">Registrado {new Date(pago.creado_en).toLocaleString('es-PE')}</p>
+              <p className="text-xs text-neutral-500">Registrado {new Date(pago.creado_en).toLocaleString('es-PE')}</p>
               {pago.evidencia_ruta && (
-                <button type="button" onClick={() => verEvidencia(pago.evidencia_ruta)} className="mt-2 text-xs font-semibold text-teal-700 underline">
+                <button type="button" onClick={() => verEvidencia(pago.evidencia_ruta)} className="mt-2 text-xs font-semibold text-brand-700 underline">
                   Ver captura
                 </button>
               )}
@@ -141,7 +141,7 @@ export function PagosPendientesAdmin() {
                 </div>
               ) : (
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button type="button" disabled={procesando === pago.id} onClick={() => resolver(pago.id, true)} className="rounded-lg bg-green-600 px-3 py-2 font-semibold text-white disabled:opacity-60">
+                  <button type="button" disabled={procesando === pago.id} onClick={() => resolver(pago.id, true)} className="rounded-lg bg-green-700 px-3 py-2 font-semibold text-white disabled:opacity-60">
                     Confirmar pago
                   </button>
                   <button type="button" onClick={() => setRechazando(pago.id)} className="rounded-lg border border-red-300 px-3 py-2 font-semibold text-red-700">

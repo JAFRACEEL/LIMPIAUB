@@ -1,5 +1,7 @@
 # Limpi — instrucciones para Claude Code
 
+> **Marca actual: YAVI — «Servicios a tu alcance».** «Limpi» es el nombre anterior y sigue en identificadores internos (paquete, claves de almacenamiento, service worker, tablas). Textos visibles y diseño: ver `docs/diseno-yavi.md`.
+
 Construye una web app tipo Uber para limpieza doméstica por horas en Iquitos, Perú. Dos lados: **clientes** buscan y reservan; **trabajadores** se inscriben, activan "Disponible ahora" y aceptan trabajos. Un **admin** verifica trabajadores.
 
 ## Stack (no cambiar)

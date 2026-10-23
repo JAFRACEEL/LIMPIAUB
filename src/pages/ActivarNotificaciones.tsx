@@ -96,7 +96,7 @@ export function ActivarNotificaciones() {
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-57px)] max-w-lg flex-col justify-center px-4 py-8">
       <div className="mb-6 text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 text-3xl">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-brand-50 text-3xl">
           🔔
         </div>
         <h1 className="mb-2 text-2xl font-bold">Activa las notificaciones</h1>
@@ -110,7 +110,7 @@ export function ActivarNotificaciones() {
       {necesitaInstalarIOS ? (
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="mb-2 font-semibold">En iPhone, primero instala Limpi en tu pantalla de inicio:</p>
+            <p className="mb-2 font-semibold">En iPhone, primero instala YAVI en tu pantalla de inicio:</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
                 Toca el ícono de <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba) en Safari.
@@ -118,14 +118,14 @@ export function ActivarNotificaciones() {
               <li>
                 Elige <strong>"Agregar a inicio"</strong>.
               </li>
-              <li>Abre Limpi desde el ícono que apareció en tu pantalla de inicio (no desde Safari).</li>
+              <li>Abre YAVI desde el ícono que apareció en tu pantalla de inicio (no desde Safari).</li>
               <li>Vuelve a esta pantalla y activa las notificaciones.</li>
             </ol>
           </div>
           <button
             type="button"
             onClick={() => setInstalada(esStandalone())}
-            className="rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white"
+            className="rounded-xl bg-brand-700 px-4 py-3 font-semibold text-white"
           >
             Ya la instalé, continuar
           </button>
@@ -136,9 +136,9 @@ export function ActivarNotificaciones() {
             <button
               type="button"
               onClick={onInstalar}
-              className="rounded-xl border border-teal-700 px-4 py-3 font-semibold text-teal-700"
+              className="rounded-xl border border-brand-700 px-4 py-3 font-semibold text-brand-700"
             >
-              Instalar Limpi en mi celular
+              Instalar YAVI en mi celular
             </button>
           )}
 
@@ -146,7 +146,7 @@ export function ActivarNotificaciones() {
             type="button"
             disabled={activando || !soportaPush()}
             onClick={onActivar}
-            className="rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
+            className="rounded-xl bg-brand-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
           >
             {activando ? 'Activando…' : 'Activar notificaciones'}
           </button>

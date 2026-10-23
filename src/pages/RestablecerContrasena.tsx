@@ -43,7 +43,7 @@ export function RestablecerContrasena() {
         <p className="mb-4 text-neutral-500">
           Puede haber expirado o ya lo usaste. Pide uno nuevo para restablecer tu contraseña.
         </p>
-        <Link to="/recuperar" className="font-semibold text-teal-700">
+        <Link to="/recuperar" className="font-semibold text-brand-700">
           Pedir un enlace nuevo
         </Link>
       </div>
@@ -64,7 +64,7 @@ export function RestablecerContrasena() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="rounded-xl border border-neutral-300 px-4 py-3 text-base focus:border-teal-600"
+            className="rounded-xl border border-neutral-300 px-4 py-3 text-base focus:border-brand-600"
             placeholder="Mínimo 6 caracteres"
           />
         </label>
@@ -77,7 +77,7 @@ export function RestablecerContrasena() {
             autoComplete="new-password"
             value={confirmar}
             onChange={(e) => setConfirmar(e.target.value)}
-            className="rounded-xl border border-neutral-300 px-4 py-3 text-base focus:border-teal-600"
+            className="rounded-xl border border-neutral-300 px-4 py-3 text-base focus:border-brand-600"
             placeholder="••••••••"
           />
         </label>
@@ -87,7 +87,7 @@ export function RestablecerContrasena() {
         <button
           type="submit"
           disabled={enviando}
-          className="mt-2 rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
+          className="mt-2 rounded-xl bg-brand-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
         >
           {enviando ? 'Guardando…' : 'Guardar nueva contraseña'}
         </button>

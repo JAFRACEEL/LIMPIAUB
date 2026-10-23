@@ -14,7 +14,7 @@ describe('calcularTotal', () => {
 describe('calcularComision', () => {
   it('aplica el % solo sobre el servicio, no sobre el recargo', () => {
     // Servicio: 20 * 3 = 60. Comisión 20% = 12. Con kit: +S/5 fijos para
-    // Limpi y +S/13 fijos para la trabajadora (del recargo de S/18).
+    // YAVI y +S/13 fijos para la trabajadora (del recargo de S/18).
     const { comisionLimpi, netoTrabajadora } = calcularComision(60, 20, 18)
     expect(comisionLimpi).toBe(12 + 5)
     expect(netoTrabajadora).toBe(60 - 12 + 13)

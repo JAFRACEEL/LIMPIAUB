@@ -129,7 +129,7 @@ export function PasoResumen({
       {detalle && <AlcanceServicio incluye={detalle.incluye} noIncluye={detalle.noIncluye} condiciones={detalle.notas} titulo="Qué incluye y condiciones" />}
 
       {!haySesion && (
-        <p className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+        <p className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-900">
           Para enviar tu pedido necesitas entrar o crear tu cuenta. Guardamos lo que escribiste: al volver sigues aquí.
           <Link to="/registro?volver=/pedir" className="mt-2 block font-semibold underline">
             Crear cuenta

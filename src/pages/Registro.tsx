@@ -1,3 +1,4 @@
+import { Logo } from '../components/Logo'
 import { useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -148,7 +149,7 @@ export function Registro() {
       if (!referencia2Nombre.trim() || !esCelularValido(referencia2Celular)) {
         return 'Completa el nombre y celular (9 dígitos) de tu segunda referencia.'
       }
-      if (!aceptaVerificacion) return 'Debes aceptar el proceso de verificación de Limpi.'
+      if (!aceptaVerificacion) return 'Debes aceptar el proceso de verificación de YAVI.'
     }
 
     return null
@@ -304,9 +305,10 @@ export function Registro() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8">
-      <h1 className="mb-1 text-2xl font-bold">Crea tu cuenta</h1>
-      <p className="mb-6 text-neutral-500">Elige cómo quieres usar Limpi.</p>
+    <div className="mx-auto max-w-lg px-4 py-6">
+      <Logo className="mx-auto -mb-4 -mt-2 w-52" />
+      <h1 className="mb-1 text-3xl font-extrabold">Crea tu cuenta</h1>
+      <p className="mb-6 text-neutral-500">Elige cómo quieres usar YAVI.</p>
 
       <div className="mb-6 grid grid-cols-2 gap-3">
         <button
@@ -314,7 +316,7 @@ export function Registro() {
           onClick={() => setRol('cliente')}
           className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
             rol === 'cliente'
-              ? 'border-teal-700 bg-teal-50 text-teal-800'
+              ? 'border-brand-700 bg-brand-50 text-brand-800'
               : 'border-neutral-300 text-neutral-600'
           }`}
         >
@@ -325,7 +327,7 @@ export function Registro() {
           onClick={() => setRol('trabajador')}
           className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
             rol === 'trabajador'
-              ? 'border-teal-700 bg-teal-50 text-teal-800'
+              ? 'border-brand-700 bg-brand-50 text-brand-800'
               : 'border-neutral-300 text-neutral-600'
           }`}
         >
@@ -428,7 +430,7 @@ export function Registro() {
                 {cuentaAutorizacion === 'no' && (
                   <p className="rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
                     Puedes continuar con tu registro. Tu solicitud quedará como "Pendiente de
-                    validación para trabajar": no podrás recibir pedidos hasta que Limpi valide tu
+                    validación para trabajar": no podrás recibir pedidos hasta que YAVI valide tu
                     autorización para trabajar en el Perú.
                   </p>
                 )}
@@ -477,7 +479,7 @@ export function Registro() {
                       />
                     </Campo>
                     <p className="text-xs text-neutral-500">
-                      Aun así, no quedarás habilitada/o para aceptar servicios hasta que Limpi
+                      Aun así, no quedarás habilitada/o para aceptar servicios hasta que YAVI
                       valide tu autorización para trabajar en el Perú.
                     </p>
                   </div>
@@ -538,7 +540,7 @@ export function Registro() {
                         checked={seleccionada}
                         disabled={deshabilitada}
                         onChange={() => alternarZona(z)}
-                        className="h-4 w-4 accent-teal-700"
+                        className="h-4 w-4 accent-brand-700"
                       />
                       {z}
                     </label>
@@ -555,7 +557,7 @@ export function Registro() {
                       type="checkbox"
                       checked={servicios.includes(s)}
                       onChange={() => alternarServicio(s)}
-                      className="h-4 w-4 accent-teal-700"
+                      className="h-4 w-4 accent-brand-700"
                     />
                     {s}
                   </label>
@@ -674,9 +676,9 @@ export function Registro() {
                 type="checkbox"
                 checked={aceptaVerificacion}
                 onChange={(e) => setAceptaVerificacion(e.target.checked)}
-                className="mt-0.5 h-4 w-4 accent-teal-700"
+                className="mt-0.5 h-4 w-4 accent-brand-700"
               />
-              Acepto pasar por el proceso de verificación de Limpi antes de poder recibir
+              Acepto pasar por el proceso de verificación de YAVI antes de poder recibir
               pedidos.
             </label>
           </>
@@ -711,7 +713,7 @@ export function Registro() {
         <button
           type="submit"
           disabled={enviando}
-          className="mt-2 rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
+          className="mt-2 rounded-xl bg-brand-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
         >
           {enviando ? 'Creando cuenta…' : 'Crear cuenta'}
         </button>
@@ -719,7 +721,7 @@ export function Registro() {
 
       <p className="mt-6 text-center text-sm text-neutral-500">
         ¿Ya tienes cuenta?{' '}
-        <Link to="/login" className="font-semibold text-teal-700">
+        <Link to="/login" className="font-semibold text-brand-700">
           Inicia sesión
         </Link>
       </p>

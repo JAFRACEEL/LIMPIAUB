@@ -76,10 +76,10 @@ export function PedidoEntranteOverlay({
       <button
         type="button"
         onClick={onMaximizar}
-        className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-between gap-3 rounded-2xl bg-teal-800 px-4 py-3 text-left text-white shadow-xl"
+        className="fixed inset-x-4 bottom-4 z-50 flex items-center justify-between gap-3 rounded-2xl bg-navy-800 px-4 py-3 text-left text-white shadow-xl"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-xs font-semibold uppercase tracking-wide text-teal-200">
+          <span className="block text-xs font-semibold uppercase tracking-wide text-white">
             {pedido.tipo === 'directo' ? 'Pedido directo' : 'Pedido cerca de ti'}
           </span>
           <span className="block truncate text-sm font-semibold">
@@ -87,29 +87,29 @@ export function PedidoEntranteOverlay({
           </span>
         </span>
         {cuentaRegresiva && <span className="shrink-0 text-xs font-bold">⏱ {cuentaRegresiva}</span>}
-        <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-teal-800">Ver</span>
+        <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand-800">Ver</span>
       </button>
     )
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto text-white"
+      className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto text-brand-ink"
       style={{
-        background: 'radial-gradient(120% 90% at 50% 0%, #14b8a6 0%, #0f766e 45%, #0c4a44 100%)',
+        background: 'radial-gradient(120% 90% at 50% 0%, #ffa04a 0%, #ff7a1a 42%, #e8590c 100%)',
       }}
     >
       {confirmacion ? (
         <div className="flex min-h-full flex-col items-center justify-center gap-3 px-8 py-14 text-center">
           <div
             className={`flex h-20 w-20 items-center justify-center rounded-full bg-white text-4xl ${
-              confirmacion.tipo === 'aceptado' ? 'text-teal-700' : 'text-neutral-500'
+              confirmacion.tipo === 'aceptado' ? 'text-brand-700' : 'text-neutral-500'
             }`}
           >
             {confirmacion.tipo === 'aceptado' ? '✓' : '✕'}
           </div>
           <p className="text-xl font-extrabold">{confirmacion.titulo}</p>
-          <p className="text-sm text-teal-100">{confirmacion.mensaje}</p>
+          <p className="text-sm text-brand-ink">{confirmacion.mensaje}</p>
         </div>
       ) : pedido ? (
         <div className="flex min-h-full w-full max-w-lg flex-col items-center justify-between gap-6 px-7 py-14">
@@ -117,11 +117,11 @@ export function PedidoEntranteOverlay({
             <button
               type="button"
               onClick={onMinimizar}
-              className="mb-1 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-teal-100"
+              className="mb-1 rounded-full bg-white/35 px-3 py-1 text-xs font-semibold text-brand-ink"
             >
               ↓ Ver panel
             </button>
-            <p className="text-xs font-bold uppercase tracking-widest text-teal-100">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-ink">
               {pedido.tipo === 'directo' ? 'Pedido directo para ti' : 'Nuevo pedido abierto'}
             </p>
             {cuentaRegresiva && <p className="text-3xl font-extrabold tabular-nums">{cuentaRegresiva}</p>}
@@ -136,7 +136,7 @@ export function PedidoEntranteOverlay({
                 height="52"
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="#0f766e"
+                stroke="#123b8c"
                 strokeWidth={1.8}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -151,10 +151,10 @@ export function PedidoEntranteOverlay({
           <div className="flex w-full flex-col items-center gap-4">
             <div className="text-center">
               <p className="text-4xl font-extrabold leading-none">S/ {pedido.pagoNeto.toFixed(2)}</p>
-              <p className="mt-1 text-sm text-teal-100">Pago neto estimado</p>
+              <p className="mt-1 text-sm text-brand-ink">Pago neto estimado</p>
             </div>
 
-            <div className="w-full rounded-2xl bg-white/15 px-4 py-3 text-sm">
+            <div className="w-full rounded-2xl bg-white/30 px-4 py-3 text-sm">
               <Fila etiqueta="Servicio" valor={pedido.servicio} />
               {pedido.subtipoServicio && <Fila etiqueta="Detalle" valor={pedido.subtipoServicio} />}
               <Fila etiqueta="Zona" valor={pedido.zona} />
@@ -162,12 +162,12 @@ export function PedidoEntranteOverlay({
               <Fila etiqueta="Duración" valor={`${pedido.horas} horas`} />
               {pedido.conMateriales && <Fila etiqueta="Materiales" valor="Llevas tu kit (+S/ 18)" />}
               {pedido.advertencia && (
-                <p className="mt-2 border-t border-white/20 pt-2 font-semibold text-amber-200">
+                <p className="mt-2 border-t border-brand-ink/25 pt-2 font-bold text-brand-ink">
                   ⚠️ {pedido.advertencia}
                 </p>
               )}
               {pedido.descripcionTrabajo && (
-                <p className="mt-2 border-t border-white/20 pt-2 text-teal-50">{pedido.descripcionTrabajo}</p>
+                <p className="mt-2 border-t border-brand-ink/25 pt-2 text-brand-ink">{pedido.descripcionTrabajo}</p>
               )}
               <DetallesServicioVista
                 claro
@@ -183,7 +183,7 @@ export function PedidoEntranteOverlay({
                 disabled={procesando}
                 onClick={onRechazar}
                 aria-label="Rechazar pedido"
-                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/15 text-2xl text-white disabled:opacity-60"
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-white/35 text-2xl text-brand-ink disabled:opacity-60"
               >
                 ✕
               </button>
@@ -191,13 +191,13 @@ export function PedidoEntranteOverlay({
                 type="button"
                 disabled={procesando}
                 onClick={onAceptar}
-                className="h-16 flex-1 rounded-full bg-white text-lg font-extrabold text-teal-800 disabled:opacity-60"
+                className="h-16 flex-1 rounded-full bg-white text-lg font-extrabold text-brand-700 shadow-lg disabled:opacity-60"
               >
                 Acepto
               </button>
             </div>
 
-            <p className="text-center text-[11px] text-teal-100">
+            <p className="text-center text-[11px] text-brand-ink">
               {pedido.tipo === 'directo'
                 ? 'Aún no ves la dirección; aparece apenas aceptes.'
                 : 'No ves la dirección ni el nombre de la clienta hasta que te elija.'}
@@ -212,7 +212,7 @@ export function PedidoEntranteOverlay({
 function Fila({ etiqueta, valor }: { etiqueta: string; valor: string }) {
   return (
     <div className="flex items-center justify-between gap-3 py-0.5">
-      <span className="text-teal-100">{etiqueta}</span>
+      <span className="text-brand-ink">{etiqueta}</span>
       <span className="text-right font-semibold">{valor}</span>
     </div>
   )

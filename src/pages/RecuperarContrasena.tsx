@@ -1,3 +1,5 @@
+import { Logo } from '../components/Logo'
+import { Aviso } from '../components/ui'
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -25,16 +27,17 @@ export function RecuperarContrasena() {
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-57px)] max-w-lg flex-col justify-center px-4 py-8">
-      <h1 className="mb-1 text-2xl font-bold">Recupera tu contraseña</h1>
+    <div className="mx-auto flex min-h-[calc(100dvh-57px)] max-w-lg flex-col justify-center px-4 py-6">
+      <Logo className="mx-auto -mb-4 -mt-2 w-56" />
+      <h1 className="mb-1 text-3xl font-extrabold">Recupera tu contraseña</h1>
       <p className="mb-6 text-neutral-500">Te enviamos un enlace a tu correo para crear una nueva.</p>
 
       {enviado ? (
-        <p className="rounded-lg bg-teal-50 px-4 py-3 text-sm text-teal-800">
+        <Aviso tipo="exito">
           Listo. Revisa tu correo ({email}) y sigue el enlace para crear una nueva contraseña.
-        </p>
+        </Aviso>
       ) : (
-        <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <form onSubmit={onSubmit} className="yavi-tarjeta flex flex-col gap-4 p-5">
           <label className="flex flex-col gap-1">
             <span className="text-sm font-medium text-neutral-700">Correo</span>
             <input
@@ -43,17 +46,17 @@ export function RecuperarContrasena() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="rounded-xl border border-neutral-300 px-4 py-3 text-base focus:border-teal-600"
+              className="input"
               placeholder="tucorreo@ejemplo.com"
             />
           </label>
 
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+          {error && <Aviso tipo="error">{error}</Aviso>}
 
           <button
             type="submit"
             disabled={enviando}
-            className="mt-2 rounded-xl bg-teal-700 px-4 py-3 font-semibold text-white disabled:opacity-60"
+            className="mt-2 rounded-2xl bg-brand-700 px-4 py-3.5 text-base font-bold text-white disabled:opacity-60"
           >
             {enviando ? 'Enviando…' : 'Enviar enlace'}
           </button>
@@ -61,7 +64,7 @@ export function RecuperarContrasena() {
       )}
 
       <p className="mt-6 text-center text-sm text-neutral-500">
-        <Link to="/login" className="font-semibold text-teal-700">
+        <Link to="/login" className="font-semibold text-brand-700">
           Volver a iniciar sesión
         </Link>
       </p>

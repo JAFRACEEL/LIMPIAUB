@@ -7,6 +7,9 @@ import { useCobertura } from '../lib/useCobertura'
 import { ETIQUETA_SERVICIO_CORTA } from '../lib/sinonimos'
 import { borradorVacio, borradorUtil, borrarBorrador, guardarBorrador, leerBorrador } from '../lib/borrador'
 import { borradorParaServicio } from '../lib/iniciarPedido'
+import { Logo } from '../components/Logo'
+import { IconoServicio, tonoServicio } from '../components/IconoServicio'
+import { Aviso } from '../components/ui'
 
 const EJEMPLOS = [
   'Quiero pintar mi pared con hongo',
@@ -65,13 +68,13 @@ export function Inicio() {
   const nombre = perfil?.nombre.split(' ')[0]
 
   return (
-    <div className="mx-auto max-w-lg px-4 pb-8 pt-6">
+    <div className="mx-auto max-w-lg px-4 pb-8 pt-4">
       {pendiente && borradorUtil(pendiente) && (
-        <div className="mb-5 rounded-xl border border-teal-300 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+        <div className="yavi-tarjeta mb-5 border-brand-300 bg-brand-50 px-4 py-3 text-sm text-brand-900">
           <button type="button" onClick={() => navigate('/pedir')} className="flex w-full items-center justify-between text-left">
             <span>
               <span className="block font-semibold">Tienes un pedido sin enviar</span>
-              <span className="block text-teal-800">Sigue donde lo dejaste</span>
+              <span className="block text-brand-800">Sigue donde lo dejaste</span>
             </span>
             <span aria-hidden="true">→</span>
           </button>
@@ -88,9 +91,11 @@ export function Inicio() {
         </div>
       )}
 
-      <p className="text-sm text-neutral-500">{nombre ? `Hola, ${nombre}` : 'Bienvenido a Limpi'}</p>
-      <h1 className="mb-3 text-2xl font-bold">¿Qué necesitas solucionar hoy?</h1>
+      {!session && <Logo className="mx-auto -mb-3 -mt-2 w-60" />}
+      <p className="text-sm font-medium text-navy-700">{nombre ? `Hola, ${nombre}` : 'Bienvenido a YAVI'}</p>
+      <h1 className="mb-3 text-3xl font-extrabold leading-tight text-neutral-900">¿Qué necesitas solucionar hoy?</h1>
 
+      <div className="yavi-tarjeta p-3">
       <label className="flex flex-col gap-1">
         <span className="sr-only">Cuéntanos qué pasa</span>
         <textarea
@@ -99,11 +104,11 @@ export function Inicio() {
           rows={3}
           maxLength={500}
           placeholder="Cuéntanos qué pasa en tu casa…"
-          className="input min-h-24 text-base"
+          className="input min-h-28 text-base"
         />
       </label>
 
-      <p className="mt-1 text-xs text-neutral-500">No escribas aquí DNI, claves ni datos de pago. Guardamos tu texto solo en este navegador mientras armas el pedido.</p>
+      <p className="mt-2 text-xs text-neutral-500">No escribas aquí DNI, claves ni datos de pago. Guardamos tu texto solo en este navegador mientras armas el pedido.</p>
 
       <div className="mt-2 flex flex-wrap gap-2">
         {EJEMPLOS.map((e) => (
@@ -111,7 +116,7 @@ export function Inicio() {
             key={e}
             type="button"
             onClick={() => setTexto(e)}
-            className="rounded-full border border-neutral-300 bg-white px-3 py-1.5 text-left text-xs text-neutral-600"
+            className="rounded-full border border-navy-100 bg-navy-50 px-3 py-1.5 text-left text-xs font-medium text-navy-800 shadow-xs"
           >
             {e}
           </button>
@@ -122,12 +127,13 @@ export function Inicio() {
         type="button"
         onClick={contar}
         disabled={texto.trim().length < 3}
-        className="mt-4 w-full rounded-xl bg-teal-700 px-4 py-3.5 text-base font-semibold text-white disabled:opacity-40"
+        className="mt-4 w-full rounded-2xl bg-brand-700 px-4 py-4 text-base font-bold text-white disabled:opacity-45"
       >
         Continuar
       </button>
+      </div>
 
-      <h2 className="mb-2 mt-8 text-sm font-semibold uppercase tracking-wide text-neutral-500">O elige un servicio</h2>
+      <h2 className="mb-3 mt-8 text-sm font-bold uppercase tracking-wide text-navy-700">O elige un servicio</h2>
       <div className="grid grid-cols-2 gap-3">
         {accesos.map((a) => {
           const e = estado(a.servicioId)
@@ -137,15 +143,13 @@ export function Inicio() {
               type="button"
               onClick={() => irAServicio(a.servicioId)}
               aria-disabled={!e.contratable}
-              className={`flex min-h-24 flex-col items-start justify-between rounded-2xl border p-4 text-left shadow-sm ${
-                e.contratable ? 'border-neutral-200 bg-white active:bg-neutral-50' : 'border-dashed border-neutral-300 bg-neutral-100 text-neutral-500'
-              }`}
+              className="yavi-categoria"
             >
-              <span className={`text-2xl ${e.contratable ? '' : 'opacity-50'}`} aria-hidden="true">
-                {a.icono}
+              <span className="yavi-burbuja" data-tono={tonoServicio(a.servicioId) === 'azul' ? 'azul' : undefined}>
+                <IconoServicio servicioId={a.servicioId} />
               </span>
               <span>
-                <span className="block text-base font-semibold">{a.etiqueta}</span>
+                <span className="block text-base font-bold">{a.etiqueta}</span>
                 {!e.contratable && <span className="block text-xs font-medium text-amber-800">Aún no disponible</span>}
               </span>
             </button>
@@ -153,9 +157,9 @@ export function Inicio() {
         })}
       </div>
       {aviso && (
-        <p role="status" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <Aviso tipo="alerta" className="mt-3">
           {aviso}
-        </p>
+        </Aviso>
       )}
 
       {otros.length > 0 && (
@@ -164,7 +168,7 @@ export function Inicio() {
             type="button"
             onClick={() => setVerTodos((v) => !v)}
             aria-expanded={verTodos}
-            className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3 text-sm font-semibold text-teal-800"
+            className="yavi-boton-secundario w-full"
           >
             {verTodos ? 'Ocultar servicios' : 'Ver todos los servicios'}
           </button>
@@ -176,11 +180,16 @@ export function Inicio() {
                     type="button"
                     onClick={() => irAServicio(o.servicioId)}
                     aria-disabled={!estado(o.servicioId).contratable}
-                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm ${
-                      estado(o.servicioId).contratable ? 'border-neutral-200 bg-white' : 'border-dashed border-neutral-300 bg-neutral-100 text-neutral-500'
+                    className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-semibold shadow-sm ${
+                      estado(o.servicioId).contratable ? 'border-neutral-200 bg-white' : 'border-dashed border-neutral-300 bg-neutral-100 text-neutral-500 shadow-none'
                     }`}
                   >
-                    {o.etiqueta}
+                    <span className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                        <IconoServicio servicioId={o.servicioId} className="h-5 w-5" />
+                      </span>
+                      {o.etiqueta}
+                    </span>
                     {!estado(o.servicioId).contratable && <span className="text-xs font-medium text-amber-800">Aún no disponible</span>}
                   </button>
                 </li>
@@ -193,14 +202,14 @@ export function Inicio() {
       {!session && (
         <p className="mt-8 text-center text-sm text-neutral-500">
           Puedes mirar y armar tu pedido sin cuenta. Te la pedimos solo al enviarlo.{' '}
-          <Link to="/login" className="font-semibold text-teal-700">
+          <Link to="/login" className="font-semibold text-brand-700">
             Ya tengo cuenta
           </Link>
         </p>
       )}
       {session && perfil?.rol === 'cliente' && (
         <p className="mt-8 text-center text-sm">
-          <Link to="/buscar" className="font-semibold text-teal-700">
+          <Link to="/buscar" className="font-semibold text-brand-700">
             Ver profesionales
           </Link>
         </p>

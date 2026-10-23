@@ -73,7 +73,7 @@ export async function activarNotificaciones(userId: string): Promise<{ ok: boole
     return { ok: false, error: 'Este navegador no soporta notificaciones push.' }
   }
   if (requiereInstalarComoApp()) {
-    return { ok: false, error: 'Primero instala Limpi en tu pantalla de inicio.' }
+    return { ok: false, error: 'Primero instala YAVI en tu pantalla de inicio.' }
   }
 
   const permiso = await Notification.requestPermission()
