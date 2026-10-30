@@ -7,7 +7,7 @@ import { volverSeguro } from '../lib/rutas'
 import {
   ZONAS,
   MAX_ZONAS_TRABAJADOR,
-  SERVICIOS,
+  SERVICIOS_TECNICO,
   ANTECEDENTES,
   GENEROS,
   NACIONALIDADES,
@@ -551,7 +551,7 @@ export function Registro() {
 
             <Campo etiqueta="Servicios que ofreces">
               <div className="flex flex-col gap-2 rounded-xl border border-neutral-300 p-3">
-                {SERVICIOS.map((s) => (
+                {SERVICIOS_TECNICO.map((s) => (
                   <label key={s} className="flex items-center gap-2 text-sm">
                     <input
                       type="checkbox"

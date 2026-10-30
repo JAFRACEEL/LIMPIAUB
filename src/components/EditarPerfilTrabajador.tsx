@@ -1,20 +1,32 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
-import { ZONAS, MAX_ZONAS_TRABAJADOR, SERVICIOS } from '../lib/constantes'
-import { esTarifaValida, sonZonasValidas } from '../lib/validadores'
+import { ZONAS, MAX_ZONAS_TRABAJADOR, SERVICIOS_TECNICO } from '../lib/constantes'
+import { esCelularValido, esTarifaValida, sonZonasValidas } from '../lib/validadores'
+import { Avatar } from './PanelProfesional'
 import type { Trabajador } from '../types'
 
 export function EditarPerfilTrabajador({
   trabajador,
   onActualizado,
+  abierto: abiertoControlado,
+  onCambiarAbierto,
 }: {
   trabajador: Trabajador
   onActualizado: () => void
+  /** Si se pasan `abierto` y `onCambiarAbierto`, quien lo usa decide cuándo abrir (el botón vive afuera). */
+  abierto?: boolean
+  onCambiarAbierto?: (abierto: boolean) => void
 }) {
-  const { recargarPerfil } = useAuth()
-  const [abierto, setAbierto] = useState(false)
+  const { recargarPerfil, perfil } = useAuth()
+  const [nombre, setNombre] = useState(perfil?.nombre ?? '')
+  const [celular, setCelular] = useState(perfil?.telefono ?? '')
+  const [direccion, setDireccion] = useState(perfil?.direccion ?? '')
+  const [abiertoPropio, setAbiertoPropio] = useState(false)
+  const controlado = abiertoControlado !== undefined && !!onCambiarAbierto
+  const abierto = controlado ? abiertoControlado : abiertoPropio
+  const setAbierto = controlado ? onCambiarAbierto : setAbiertoPropio
   const [tarifaHora, setTarifaHora] = useState(String(trabajador.tarifa_hora))
   const [servicios, setServicios] = useState<string[]>(trabajador.servicios)
   const [zonas, setZonas] = useState<string[]>(trabajador.zonas)
@@ -23,6 +35,8 @@ export function EditarPerfilTrabajador({
   const [cv, setCv] = useState<File | null>(null)
   const [antecedentesDoc, setAntecedentesDoc] = useState<File | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const fotoVista = useMemo(() => (foto ? URL.createObjectURL(foto) : null), [foto])
+  useEffect(() => () => { if (fotoVista) URL.revokeObjectURL(fotoVista) }, [fotoVista])
   const [error, setError] = useState<string | null>(null)
 
   function alternarServicio(s: string) {
@@ -38,6 +52,14 @@ export function EditarPerfilTrabajador({
   }
 
   async function guardar() {
+    if (nombre.trim().length < 3) {
+      setError('Escribe tu nombre completo.')
+      return
+    }
+    if (!esCelularValido(celular)) {
+      setError('El celular debe tener 9 dígitos y empezar con 9.')
+      return
+    }
     const tarifa = Number(tarifaHora)
     if (!esTarifaValida(tarifa)) {
       setError('La tarifa por hora debe estar entre S/ 5 y S/ 100.')
@@ -55,6 +77,12 @@ export function EditarPerfilTrabajador({
     setEnviando(true)
     setError(null)
 
+    const cambiosPerfil: Record<string, unknown> = {
+      nombre: nombre.trim(),
+      telefono: celular,
+      direccion: direccion.trim() || null,
+    }
+
     if (foto) {
       const extension = foto.name.split('.').pop() ?? 'jpg'
       const ruta = `${trabajador.id}/${Date.now()}.${extension}`
@@ -64,13 +92,14 @@ export function EditarPerfilTrabajador({
         setEnviando(false)
         return
       }
-      const fotoUrl = supabase.storage.from('fotos').getPublicUrl(ruta).data.publicUrl
-      const { error: errorFoto } = await supabase.from('perfiles').update({ foto_url: fotoUrl }).eq('id', trabajador.id)
-      if (errorFoto) {
-        setError(traducirError(errorFoto))
-        setEnviando(false)
-        return
-      }
+      cambiosPerfil.foto_url = supabase.storage.from('fotos').getPublicUrl(ruta).data.publicUrl
+    }
+
+    const { error: errorPerfil } = await supabase.from('perfiles').update(cambiosPerfil).eq('id', trabajador.id)
+    if (errorPerfil) {
+      setError(traducirError(errorPerfil))
+      setEnviando(false)
+      return
     }
 
     async function subirDocumento(file: File, prefijo: string): Promise<string | null> {
@@ -125,6 +154,7 @@ export function EditarPerfilTrabajador({
   }
 
   if (!abierto) {
+    if (controlado) return null
     return (
       <button
         type="button"
@@ -137,9 +167,43 @@ export function EditarPerfilTrabajador({
   }
 
   return (
-    <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-4">
+    <div id="editar-perfil" className="yavi-tarjeta mt-3 scroll-mt-20 p-4">
       <p className="mb-3 font-semibold">Editar mi perfil</p>
       <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
+          <Avatar nombre={nombre} fotoUrl={fotoVista ?? perfil?.foto_url ?? null} className="h-20 w-20 text-2xl" />
+          <label className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="text-sm font-medium text-neutral-700">Foto de perfil</span>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFoto(e.target.files?.[0] ?? null)}
+              className="text-sm"
+            />
+          </label>
+        </div>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-neutral-700">Nombre completo</span>
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={80} autoComplete="name" className="input" />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-neutral-700">Celular (9 dígitos)</span>
+          <input
+            value={celular}
+            onChange={(e) => setCelular(e.target.value.replace(/\D/g, '').slice(0, 9))}
+            inputMode="numeric"
+            autoComplete="tel"
+            className="input"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1">
+          <span className="text-sm font-medium text-neutral-700">Dirección (opcional)</span>
+          <input value={direccion} onChange={(e) => setDireccion(e.target.value)} maxLength={120} autoComplete="street-address" className="input" />
+        </label>
+
         <label className="flex flex-col gap-1">
           <span className="text-sm font-medium text-neutral-700">Tarifa por hora (S/ 5 - 100)</span>
           <input
@@ -156,7 +220,7 @@ export function EditarPerfilTrabajador({
         <div className="flex flex-col gap-1">
           <span className="text-sm font-medium text-neutral-700">Servicios que ofreces</span>
           <div className="flex flex-col gap-2 rounded-xl border border-neutral-300 p-3">
-            {SERVICIOS.map((s) => (
+            {SERVICIOS_TECNICO.map((s) => (
               <label key={s} className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -201,16 +265,6 @@ export function EditarPerfilTrabajador({
             onChange={(e) => setDescripcion(e.target.value)}
             className="input min-h-20"
             placeholder="Cuéntales a las clientas sobre ti"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-neutral-700">Cambiar foto de perfil</span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setFoto(e.target.files?.[0] ?? null)}
-            className="text-sm"
           />
         </label>
 

@@ -19,6 +19,29 @@ export const MAX_ZONAS_TRABAJADOR = 3
 
 export { NOMBRES_SERVICIOS as SERVICIOS } from './catalogoServicios'
 
+/**
+ * Servicios que el técnico puede marcar como suyos (registro y "Editar perfil").
+ * Es una lista aparte del catálogo de clientes: no lo modifica ni toca la base de datos.
+ */
+export const SERVICIOS_TECNICO = [
+  'Limpieza y reorganización del hogar',
+  'Limpieza de oficinas y comercios',
+  'Limpieza de alojamientos y Airbnb',
+  'Limpieza post Eventos o Postfiesta',
+  'Retiro de Desmonte y Limpieza de Obra',
+  'Lavado y Planchado de Ropa',
+  'Electricidad',
+  'Aire acondicionado',
+  'Gasfitería',
+  'Carpintería',
+  'Pintura',
+  'Albañilería',
+  'Cerrajería',
+  'Vidriería y aluminio',
+  'Mantenimiento y Reparaciones Generales',
+  'Mercado en Casa',
+] as const
+
 export const ANTECEDENTES = [
   { value: 'vigente', label: 'Vigente' },
   { value: 'en_tramite', label: 'En trámite' },

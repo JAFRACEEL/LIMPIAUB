@@ -27,6 +27,10 @@ Navegación del cliente: Inicio, Mis servicios (`/reservas`: la ruta se mantiene
 ## Qué se puede contratar hoy y qué se muestra
 - Hoy solo "por horas" es operativo, y únicamente en servicios donde cobrar por tiempo tiene sentido (limpieza, lavado, organización, reparaciones generales).
 - **Electricidad, Gasfitería, Aire acondicionado, Cerrajería, Pintura, Albañilería, Carpintería y Vidriería no se contratan "por horas" como reemplazo.** Se muestran como "Aún no disponible" y se explica por qué; no hay botón para continuar. Se habilitan cuando `propuestas_activas` esté en `true`, el panel del profesional exista y haya precios configurados.
+
+## Panel del profesional (2026-10-30, parcial)
+Hecho: `src/components/PanelProfesional.tsx` (tarjeta de perfil con avatar/iniciales, especialidad, kit de limpieza, edición de perfil) con helpers probados en `src/lib/panelProfesional.ts` (`iniciales`, `especialidad`, `ofreceKitDeLimpieza`) y `src/lib/sesion.ts`; integrado en `Panel.tsx`, `Navbar.tsx`, `EditarPerfilTrabajador.tsx` y `Registro.tsx`. Capturas en `docs/capturas-panel-profesional/`.
+**Falta**: precios por servicio y recepción/respuesta de propuestas. Hasta entonces `propuestas_activas` debe seguir en `false`.
 - **Cobertura** (`v_cobertura_servicios`, solo conteos, legible sin cuenta): un servicio sin profesionales habilitados se muestra pero no se puede contratar, y en el paso 2 se avisa si no hay profesionales en la zona elegida. **Aire acondicionado hoy no tiene ninguno.** Su ficha de alcance es provisional (está marcada en el código): revisarla con técnicos reales antes de abrirlo.
 
 ## Borrador del pedido

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
@@ -10,6 +10,19 @@ import { tieneSuscripcionGuardada } from '../lib/push'
 import { activarSonido, audioListo, detenerAlarma, iniciarAlarma, prepararSonido, reproducirSonidoAlerta } from '../lib/sonido'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
 import { EditarPerfilTrabajador } from '../components/EditarPerfilTrabajador'
+import {
+  BarraProfesional,
+  BurbujaIcono,
+  Estadistica,
+  Ganancia,
+  Icono,
+  TarjetaInterruptor,
+  TarjetaPerfil,
+  type PestanaProfesional,
+} from '../components/PanelProfesional'
+import { cerrarSesion } from '../lib/sesion'
+import { ofreceKitDeLimpieza } from '../lib/panelProfesional'
+import { formatoSoles, RECARGO_KIT } from '../lib/precios'
 import { DetallesServicioVista } from '../components/DetallesServicioVista'
 import type { DetallesServicio } from '../lib/preguntasServicio'
 import { PedidoEntranteOverlay, type PedidoEntranteOverlayData } from '../components/PedidoEntranteOverlay'
@@ -24,7 +37,11 @@ function vibrar() {
 }
 
 export function Panel() {
-  const { session } = useAuth()
+  const { session, perfil } = useAuth()
+  const [editando, setEditando] = useState(false)
+  const [pestana, setPestana] = useState<PestanaProfesional>('panel')
+  const [params, setParams] = useSearchParams()
+  const navigate = useNavigate()
   const [trabajador, setTrabajador] = useState<Trabajador | null>(null)
   const [reservasPropias, setReservasPropias] = useState<Reserva[]>([])
   const [pedidosAbiertos, setPedidosAbiertos] = useState<PedidoAbierto[]>([])
@@ -51,6 +68,7 @@ export function Panel() {
   const primeraCargaRef = useRef(true)
   const trabajadorRef = useRef<Trabajador | null>(null)
   const idPedidoActualRef = useRef<string | null>(null)
+  const refMisServicios = useRef<HTMLElement | null>(null)
 
   const cargarTrabajador = useCallback(async () => {
     if (!session) return null
@@ -205,6 +223,14 @@ export function Panel() {
   useEffect(() => {
     trabajadorRef.current = trabajador
   }, [trabajador])
+
+  useEffect(() => {
+    if (params.get('editar') !== '1' || !trabajador) return
+    setEditando(true)
+    setPestana('perfil')
+    setParams({}, { replace: true })
+    window.setTimeout(() => document.getElementById('editar-perfil')?.scrollIntoView({ block: 'start' }), 0)
+  }, [params, trabajador, setParams])
 
   useEffect(() => {
     if (!session) return
@@ -530,9 +556,45 @@ export function Panel() {
   )
   const completadas = reservasPropias.filter((r) => r.estado === 'completada' && !calificadas.has(r.id))
   const postulacionesLista = Object.values(postulaciones)
+  const hayServicios = enCurso.length > 0 || postulacionesLista.length > 0 || completadas.length > 0
+  const resumenServicios = hayServicios
+    ? [
+        enCurso.length > 0 && `${enCurso.length} en curso`,
+        postulacionesLista.length > 0 && `${postulacionesLista.length} esperando respuesta`,
+        completadas.length > 0 && `${completadas.length} por calificar`,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : 'Revisa tus trabajos y postulaciones'
+
+  async function salir() {
+    await cerrarSesion()
+    navigate('/login')
+  }
+
+  function elegirPestana(p: PestanaProfesional) {
+    setPestana(p)
+    if (p === 'panel') window.scrollTo({ top: 0 })
+    else if (p === 'servicios') irAMisServicios()
+    else abrirEdicion()
+  }
+
+  function abrirEdicion() {
+    setEditando(true)
+    setPestana('perfil')
+    window.setTimeout(() => document.getElementById('editar-perfil')?.scrollIntoView({ block: 'start' }), 0)
+  }
+
+  function irAMisServicios() {
+    const destino = refMisServicios.current
+    if (!destino) return
+    setPestana('servicios')
+    destino.scrollIntoView({ block: 'start' })
+    destino.focus({ preventScroll: true })
+  }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-6">
+    <div className="mx-auto max-w-lg px-4 pb-28 pt-4">
       {audioBloqueado && (
         <button
           type="button"
@@ -554,10 +616,23 @@ export function Panel() {
         onVerFoto={verFotoReferencia}
       />
 
-      <h1 className="mb-1 text-2xl font-bold">Tu panel</h1>
-      <p className="mb-6 text-neutral-500">Activa tu disponibilidad cuando quieras recibir pedidos.</p>
+      <h1 className="mb-3 mt-1 text-3xl font-extrabold text-neutral-900">Mi panel</h1>
 
-      <div className="pointer-events-none fixed inset-x-0 top-16 z-20 flex flex-col items-center gap-2 px-4">
+      <TarjetaPerfil
+        nombre={perfil?.nombre ?? ''}
+        fotoUrl={perfil?.foto_url ?? null}
+        servicios={trabajador.servicios}
+        editando={editando}
+        onEditar={abrirEdicion}
+      />
+      <EditarPerfilTrabajador
+        trabajador={trabajador}
+        onActualizado={cargarTrabajador}
+        abierto={editando}
+        onCambiarAbierto={setEditando}
+      />
+
+      <div className="pointer-events-none fixed inset-x-0 top-24 z-20 flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
           <div key={t.id} className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white shadow-lg">
             {t.mensaje}
@@ -566,7 +641,7 @@ export function Panel() {
       </div>
 
       {!trabajador.habilitado_trabajar ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800">
+        <div className="yavi-aviso mt-3" data-tipo="alerta">
           {!trabajador.verificado
             ? 'Tu perfil está en revisión. Un administrador de YAVI verificará tus datos antes de que puedas activar "Disponible ahora".'
             : trabajador.estado_migratorio === 'rechazado'
@@ -581,117 +656,96 @@ export function Panel() {
           <CompletarDocumentosMigratorios trabajadorId={trabajador.id} onListo={cargarTrabajador} />
         )}
 
-      {trabajador.habilitado_trabajar && tieneNotificaciones === false && (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-          <p className="font-semibold text-amber-900">Disponible ahora</p>
-          <p className="mt-1 text-sm text-amber-800">
-            Activa las notificaciones para recibir pedidos: son la única forma de enterarte al toque cuando llega
-            uno, aunque tengas la app cerrada.
-          </p>
-          <Link
-            to="/activar-notificaciones"
-            className="mt-3 inline-block rounded-lg bg-amber-900 px-3 py-2 text-sm font-semibold text-white"
-          >
-            Activar notificaciones
-          </Link>
-        </div>
-      )}
-
-      {trabajador.habilitado_trabajar && tieneNotificaciones !== false && (
-        <div className="rounded-2xl border border-neutral-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold">Disponible ahora</p>
-              <p className="text-sm text-neutral-500">
-                {trabajador.disponible_ahora
-                  ? 'Las clientas te ven en la búsqueda.'
-                  : 'No apareces en la búsqueda.'}
-              </p>
-            </div>
-            <button
-              role="switch"
-              aria-checked={trabajador.disponible_ahora}
-              onClick={alternarDisponible}
-              disabled={actualizando || tieneNotificaciones === null}
-              className={`relative h-9 w-16 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-                trabajador.disponible_ahora ? 'bg-green-700' : 'bg-neutral-300'
-              }`}
-            >
-              <span
-                className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow transition-transform ${
-                  trabajador.disponible_ahora ? 'translate-x-8' : 'translate-x-1'
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="mt-3 rounded-2xl border border-neutral-200 bg-white p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="font-semibold">Tengo mi propio kit de limpieza</p>
-            <p className="text-sm text-neutral-500">
-              {trabajador.kit_propio
-                ? 'Puedes ofrecer "llevo mi kit" (+S/ 18) en pedidos que lo pidan.'
-                : 'Actívalo si puedes llevar tus propios materiales de limpieza.'}
+      <div className="mt-3 flex flex-col gap-3">
+        {trabajador.habilitado_trabajar && tieneNotificaciones === false && (
+          <div className="yavi-aviso" data-tipo="alerta">
+            <p className="font-semibold">Disponible ahora</p>
+            <p className="mt-1">
+              Activa las notificaciones para recibir pedidos: son la única forma de enterarte al toque cuando llega
+              uno, aunque tengas la app cerrada.
             </p>
+            <Link
+              to="/activar-notificaciones"
+              className="mt-3 inline-block rounded-xl bg-amber-900 px-3 py-2 text-sm font-semibold text-white"
+            >
+              Activar notificaciones
+            </Link>
           </div>
-          <button
-            role="switch"
-            aria-checked={trabajador.kit_propio}
-            onClick={alternarKitPropio}
-            disabled={actualizando}
-            className={`relative h-9 w-16 shrink-0 rounded-full transition-colors disabled:opacity-60 ${
-              trabajador.kit_propio ? 'bg-green-700' : 'bg-neutral-300'
-            }`}
-          >
-            <span
-              className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow transition-transform ${
-                trabajador.kit_propio ? 'translate-x-8' : 'translate-x-1'
-              }`}
-            />
-          </button>
-        </div>
+        )}
+
+        {trabajador.habilitado_trabajar && tieneNotificaciones !== false && (
+          <TarjetaInterruptor
+            id="interruptor-disponible"
+            icono={
+              <BurbujaIcono tono="verde">
+                <span className={`h-4 w-4 rounded-full ${trabajador.disponible_ahora ? 'bg-green-600' : 'bg-neutral-400'}`} />
+              </BurbujaIcono>
+            }
+            titulo="Disponible ahora"
+            texto={
+              trabajador.disponible_ahora
+                ? 'Visible para nuevos pedidos'
+                : 'No apareces en la búsqueda. Los pedidos programados te siguen llegando.'
+            }
+            activo={trabajador.disponible_ahora}
+            onCambiar={alternarDisponible}
+            deshabilitado={actualizando || tieneNotificaciones === null}
+          />
+        )}
+
+        {ofreceKitDeLimpieza(trabajador.servicios) && (
+          <TarjetaInterruptor
+            id="interruptor-kit"
+            icono={
+              <BurbujaIcono>
+                <Icono nombre="kit" className="h-5 w-5" />
+              </BurbujaIcono>
+            }
+            titulo="Mi kit de limpieza"
+            texto={`Ofrécelo cuando el pedido lo solicite (+${formatoSoles(RECARGO_KIT).replace('.00', '')})`}
+            info={`Si el cliente no tiene materiales, puedes ofrecer llevar tu kit por un recargo de ${formatoSoles(RECARGO_KIT)}, de los cuales S/ 13 son para ti.`}
+            activo={trabajador.kit_propio}
+            onCambiar={alternarKitPropio}
+            deshabilitado={actualizando}
+          />
+        )}
       </div>
 
-      {error && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {error && (
+        <p role="alert" className="yavi-aviso mt-3" data-tipo="error">
+          {error}
+        </p>
+      )}
 
-      <dl className="mt-6 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-xl bg-neutral-100 p-3">
-          <dt className="text-xs text-neutral-500">Tarifa</dt>
-          <dd className="font-semibold">S/ {trabajador.tarifa_hora.toFixed(2)}</dd>
-        </div>
-        <div className="rounded-xl bg-neutral-100 p-3">
-          <dt className="text-xs text-neutral-500">Trabajos</dt>
-          <dd className="font-semibold">{trabajador.trabajos_completados}</dd>
-        </div>
-        <div className="rounded-xl bg-neutral-100 p-3">
-          <dt className="text-xs text-neutral-500">Rating</dt>
-          <dd className="font-semibold">
-            {trabajador.rating_n > 0 ? trabajador.rating_avg.toFixed(1) : '—'}
-          </dd>
-        </div>
+      <dl className="mt-3 grid grid-cols-3 gap-2.5">
+        <Estadistica icono="monedas" titulo="Tarifa" valor={`S/ ${trabajador.tarifa_hora.toFixed(2)}`} />
+        <Estadistica icono="documento" titulo="Trabajos" valor={trabajador.trabajos_completados} />
+        <Estadistica
+          icono="estrella"
+          titulo="Calificación"
+          valor={
+            trabajador.rating_n > 0
+              ? `${trabajador.rating_avg.toFixed(1)} ★ · ${trabajador.rating_n} ${trabajador.rating_n === 1 ? 'reseña' : 'reseñas'}`
+              : 'Sin reseñas'
+          }
+        />
       </dl>
 
-      <Seccion titulo="Ganancias">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-brand-50 p-3 text-center">
-            <dt className="text-xs text-neutral-500">Esta semana (neto)</dt>
-            <dd className="text-lg font-semibold text-brand-800">S/ {ganancias.semana.toFixed(2)}</dd>
-          </div>
-          <div className="rounded-xl bg-brand-50 p-3 text-center">
-            <dt className="text-xs text-neutral-500">Este mes (neto)</dt>
-            <dd className="text-lg font-semibold text-brand-800">S/ {ganancias.mes.toFixed(2)}</dd>
-          </div>
-        </div>
-        <p className="text-xs text-neutral-500">
-          Neto = lo que te queda después de la comisión de YAVI (incluye el S/ 13 de tu kit cuando corresponde).
+      <section aria-labelledby="titulo-ganancias" className="mt-5">
+        <h2 id="titulo-ganancias" className="mb-3 text-2xl font-extrabold text-neutral-900">
+          Mis ganancias
+        </h2>
+        <dl className="grid grid-cols-2 gap-3">
+          <Ganancia icono="tendencia" titulo="Esta semana" monto={`S/ ${ganancias.semana.toFixed(2)}`} />
+          <Ganancia icono="calendario" titulo="Este mes" monto={`S/ ${ganancias.mes.toFixed(2)}`} />
+        </dl>
+        <p className="mt-2 text-sm leading-snug text-neutral-700">
+          Después de la comisión de YAVI. Incluye S/ 13 del kit cuando corresponde.
         </p>
 
         {prestamo && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3">
-            <p className="text-sm font-medium text-amber-900">
+          <div className="yavi-aviso mt-3" data-tipo="alerta">
+            <p className="font-medium">
               {prestamo.estado === 'emitido' || prestamo.estado === 'retirado'
                 ? `Kit a crédito: saldo pendiente S/ ${prestamo.saldo.toFixed(2)} de S/ ${prestamo.monto.toFixed(2)}`
                 : prestamo.estado === 'pagado'
@@ -699,7 +753,7 @@ export function Panel() {
                   : 'Kit a crédito: marcado como perdido'}
             </p>
             {movimientosPrestamo.length > 0 && (
-              <ul className="mt-2 flex flex-col gap-1 text-xs text-neutral-600">
+              <ul className="mt-2 flex flex-col gap-1 text-xs text-neutral-700">
                 {movimientosPrestamo.map((m) => (
                   <li key={m.id}>
                     {new Date(m.creado_en).toLocaleDateString('es-PE')} — se descontó S/ {m.monto.toFixed(2)}
@@ -709,12 +763,42 @@ export function Panel() {
             )}
           </div>
         )}
-      </Seccion>
+      </section>
 
-      <EditarPerfilTrabajador trabajador={trabajador} onActualizado={cargarTrabajador} />
+      <button
+        type="button"
+        onClick={irAMisServicios}
+        aria-controls="mis-servicios"
+        className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-700 px-4 py-3.5 text-base font-bold"
+      >
+        Ver mis servicios
+        <span aria-hidden="true" className="text-xl leading-none">
+          ›
+        </span>
+        <span className="sr-only">({resumenServicios})</span>
+      </button>
 
+      <button type="button" onClick={salir} className="yavi-boton-secundario mt-3 w-full py-3.5! text-base!">
+        Cerrar sesión
+      </button>
+
+      <section
+        id="mis-servicios"
+        ref={refMisServicios}
+        tabIndex={-1}
+        aria-labelledby="titulo-mis-servicios"
+        className="mt-8 scroll-mt-24 outline-none"
+      >
+        <h2 id="titulo-mis-servicios" className="mb-1 text-lg font-bold text-neutral-900">
+          Mis servicios
+        </h2>
+        {!hayServicios && (
+          <p className="yavi-aviso" data-tipo="info">
+            Aún no tienes servicios en curso. Cuando una clienta te elija, aparecerá aquí.
+          </p>
+        )}
       {enCurso.length > 0 && (
-        <Seccion titulo="Trabajo en curso">
+        <Seccion titulo="Trabajo en curso" nivel={3} className="mt-4">
           {enCurso.map((r) => (
             <div key={r.id} className="rounded-xl border border-neutral-200 bg-white p-3">
               <p className="font-semibold">{r.servicio}</p>
@@ -751,7 +835,7 @@ export function Panel() {
       )}
 
       {postulacionesLista.length > 0 && (
-        <Seccion titulo="Tus postulaciones (esperando respuesta)">
+        <Seccion titulo="Tus postulaciones (esperando respuesta)" nivel={3} className="mt-4">
           {postulacionesLista.map((p) => (
             <div key={p.id} className="rounded-xl border border-neutral-200 bg-white p-3 text-sm text-neutral-600">
               <p>
@@ -764,7 +848,7 @@ export function Panel() {
       )}
 
       {completadas.length > 0 && (
-        <Seccion titulo="Califica a tus clientas">
+        <Seccion titulo="Califica a tus clientas" nivel={3} className="mt-4">
           {completadas.map((r) => (
             <div key={r.id} className="flex flex-col gap-2">
               <p className="text-sm text-neutral-600">{r.servicio}</p>
@@ -780,14 +864,30 @@ export function Panel() {
           ))}
         </Seccion>
       )}
+      </section>
+
+      <BarraProfesional activa={pestana} onElegir={elegirPestana} />
     </div>
   )
 }
 
-function Seccion({ titulo, children }: { titulo: string; children: ReactNode }) {
+function Seccion({
+  titulo,
+  children,
+  className = 'mt-6',
+  nivel = 2,
+}: {
+  titulo: string
+  children: ReactNode
+  className?: string
+  nivel?: 2 | 3
+}) {
+  const Titulo = nivel === 2 ? 'h2' : 'h3'
   return (
-    <div className="mt-8">
-      <h2 className="mb-3 text-lg font-semibold">{titulo}</h2>
+    <div className={className}>
+      <Titulo className={nivel === 2 ? 'mb-3 text-lg font-bold text-neutral-900' : 'mb-2 text-base font-semibold text-neutral-900'}>
+        {titulo}
+      </Titulo>
       <div className="flex flex-col gap-3">{children}</div>
     </div>
   )
