@@ -28,10 +28,15 @@ Navegación del cliente: Inicio, Mis servicios (`/reservas`: la ruta se mantiene
 - Hoy solo "por horas" es operativo, y únicamente en servicios donde cobrar por tiempo tiene sentido (limpieza, lavado, organización, reparaciones generales).
 - **Electricidad, Gasfitería, Aire acondicionado, Cerrajería, Pintura, Albañilería, Carpintería y Vidriería no se contratan "por horas" como reemplazo.** Se muestran como "Aún no disponible" y se explica por qué; no hay botón para continuar. Se habilitan cuando `propuestas_activas` esté en `true`, el panel del profesional exista y haya precios configurados.
 
-## Panel del profesional (2026-10-30, parcial)
-Hecho: `src/components/PanelProfesional.tsx` (tarjeta de perfil con avatar/iniciales, especialidad, kit de limpieza, edición de perfil) con helpers probados en `src/lib/panelProfesional.ts` (`iniciales`, `especialidad`, `ofreceKitDeLimpieza`) y `src/lib/sesion.ts`; integrado en `Panel.tsx`, `Navbar.tsx`, `EditarPerfilTrabajador.tsx` y `Registro.tsx`. Capturas en `docs/capturas-panel-profesional/`.
-**Falta**: precios por servicio y recepción/respuesta de propuestas. Hasta entonces `propuestas_activas` debe seguir en `false`.
-- **Cobertura** (`v_cobertura_servicios`, solo conteos, legible sin cuenta): un servicio sin profesionales habilitados se muestra pero no se puede contratar, y en el paso 2 se avisa si no hay profesionales en la zona elegida. **Aire acondicionado hoy no tiene ninguno.** Su ficha de alcance es provisional (está marcada en el código): revisarla con técnicos reales antes de abrirlo.
+## Panel del profesional (rediseño 2026-11-03)
+Cuatro pestañas con ruta propia (`RUTAS_PANEL` en `src/lib/panelProfesional.ts`; `App.tsx` monta `/panel/*` y `Panel.tsx` elige la vista): **Inicio** `/panel` · **Servicios** `/panel/servicios` · **Ganancias** `/panel/ganancias` · **Ajustes** `/panel/ajustes`. Una ruta desconocida vuelve a Inicio; el enlace antiguo `/panel?editar=1` lleva a Ajustes con la edición abierta.
+- **Inicio** (`InicioVista`, `src/components/panel/VistasPanel.tsx`): saludo con foto real o iniciales, interruptor "Disponible" (con "Guardando…" y error propio), "Tus trabajos" (el próximo trabajo vigente, `proximoTrabajo`; vacío con botón "Ver servicios"), "Mis ganancias" (semana y mes, netos) y resumen de trabajos realizados y calificación ("Sin reseñas").
+- **Servicios**: lo que antes era "Mis servicios" (en curso, postulaciones, calificar); el control tipo taxi no cambió.
+- **Ganancias**: semana, mes, últimos 10 servicios completados (`netoDeReserva`, misma fórmula de comisión de siempre) y el saldo del kit a crédito. Sigue llamándose "Ganancias": es ganancia acumulada, no saldo para gastar.
+- **Ajustes**: perfil, foto, servicios, zonas y tarifa por hora (`EditarPerfilTrabajador`, sin cambios de validación), kit de limpieza y sus condiciones, estado de notificaciones y cierre de sesión.
+- Un error de carga de reservas o ganancias muestra "No pudimos cargar…" con "Reintentar"; nunca se presenta como S/ 0.00 ni como "sin trabajos".
+- Las **tarifas por servicio** (`precios_profesional`) y el envío de **propuestas** NO tienen pantalla todavía, así que Ajustes no las muestra. `propuestas_activas` sigue en `false`.
+- La barra superior del profesional solo lleva logo y notificaciones; la barra inferior respeta el área segura del móvil (`viewport-fit=cover`, también en la barra del cliente).
 
 ## Borrador del pedido
 - **Dónde**: `sessionStorage` del navegador, clave `limpi.pedido.v1` (`src/lib/borrador.ts`). No se envía al servidor hasta que el cliente confirma el pedido.

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { especialidad, iniciales } from '../lib/panelProfesional'
+import { NavLink } from 'react-router-dom'
+import { iniciales, RUTAS_PANEL, type VistaPanel } from '../lib/panelProfesional'
 
 /** Piezas del panel del profesional (perfil, interruptores, estadísticas, barra inferior). Estilos en src/index.css. */
 
@@ -14,6 +15,9 @@ const ICONOS = {
   casa: 'M3 11.5 12 4l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1v-8.5Z',
   lista: 'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',
   persona: 'M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM4 21c0-3.3 3.6-6 8-6s8 2.7 8 6',
+  barras: 'M5 20v-7M12 20V5M19 20v-10',
+  ajustes: 'M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6',
+  flecha: 'M9 6l6 6-6 6',
 }
 
 export type NombreIcono = keyof typeof ICONOS
@@ -51,41 +55,6 @@ export function Avatar({ nombre, fotoUrl, className = 'h-12 w-12 text-base' }: {
     >
       {iniciales(nombre)}
     </span>
-  )
-}
-
-export function TarjetaPerfil({
-  nombre,
-  fotoUrl,
-  servicios,
-  onEditar,
-  editando,
-}: {
-  nombre: string
-  fotoUrl: string | null
-  servicios: string[]
-  onEditar: () => void
-  editando: boolean
-}) {
-  return (
-    <section aria-labelledby="panel-nombre" className="yavi-tarjeta flex items-center gap-4 p-4">
-      <Avatar nombre={nombre} fotoUrl={fotoUrl} className="h-28 w-28 text-4xl" />
-      <div className="min-w-0 flex-1">
-        <h2 id="panel-nombre" className="break-words text-xl font-extrabold leading-tight text-neutral-900">
-          {nombre || 'Tu perfil'}
-        </h2>
-        <p className="mt-0.5 break-words text-sm text-neutral-600">{servicios.length > 0 ? especialidad(servicios) : 'Profesional YAVI'}</p>
-        <button
-          type="button"
-          onClick={onEditar}
-          aria-expanded={editando}
-          aria-controls="editar-perfil"
-          className="mt-3 rounded-xl border-2 border-brand-600 bg-white px-4 py-2 text-sm font-bold text-brand-700"
-        >
-          Editar perfil
-        </button>
-      </div>
-    </section>
   )
 }
 
@@ -198,72 +167,42 @@ export function TarjetaInterruptor({
   )
 }
 
-export function Estadistica({ icono, titulo, valor }: { icono: NombreIcono; titulo: string; valor: ReactNode }) {
-  return (
-    <div className="yavi-tarjeta flex min-w-0 flex-col gap-1.5 px-2 py-3">
-      <dt className="flex items-center gap-1 text-[11px] font-medium text-neutral-700">
-        <BurbujaIcono pequena>
-          <Icono nombre={icono} className="h-3.5 w-3.5" />
-        </BurbujaIcono>
-        <span className="min-w-0 leading-tight [overflow-wrap:normal]">{titulo}</span>
-      </dt>
-      <dd className="break-words pl-1 text-lg font-extrabold leading-tight text-neutral-900">{valor}</dd>
-    </div>
-  )
-}
-
-export function Ganancia({ icono, titulo, monto }: { icono: NombreIcono; titulo: string; monto: string }) {
-  return (
-    <div className="yavi-tarjeta flex items-center gap-3 px-3 py-3.5">
-      <BurbujaIcono>
-        <Icono nombre={icono} className="h-5 w-5" />
-      </BurbujaIcono>
-      <div className="min-w-0">
-        <dt className="text-sm leading-tight text-neutral-700">
-          {titulo}
-          <span className="block text-xs text-neutral-600">Neto</span>
-        </dt>
-        <dd className="mt-0.5 break-words text-xl font-extrabold leading-tight text-brand-700">{monto}</dd>
-      </div>
-    </div>
-  )
-}
-
-export type PestanaProfesional = 'panel' | 'servicios' | 'perfil'
-
-const PESTANAS: { id: PestanaProfesional; texto: string; icono: NombreIcono }[] = [
-  { id: 'panel', texto: 'Panel', icono: 'casa' },
-  { id: 'servicios', texto: 'Servicios', icono: 'lista' },
-  { id: 'perfil', texto: 'Perfil', icono: 'persona' },
+const PESTANAS: { id: VistaPanel; texto: string; icono: NombreIcono }[] = [
+  { id: 'inicio', texto: 'Inicio', icono: 'casa' },
+  { id: 'servicios', texto: 'Servicios', icono: 'calendario' },
+  { id: 'ganancias', texto: 'Ganancias', icono: 'barras' },
+  { id: 'ajustes', texto: 'Ajustes', icono: 'ajustes' },
 ]
 
-/** Barra inferior del profesional: las tres zonas de su panel (no hay rutas aparte, se navega dentro de la página). */
-export function BarraProfesional({ activa, onElegir }: { activa: PestanaProfesional; onElegir: (p: PestanaProfesional) => void }) {
+/** Barra inferior del profesional: Inicio · Servicios · Ganancias · Ajustes, cada una con su ruta. */
+export function BarraProfesional() {
   return (
     <nav
       aria-label="Secciones del panel"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200/70 bg-white/95 shadow-[0_-8px_20px_-12px_rgb(120_53_15/0.3)] backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200/70 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_20px_-12px_rgb(120_53_15/0.3)] backdrop-blur"
     >
-      <ul className="mx-auto flex max-w-lg">
-        {PESTANAS.map((p) => {
-          const esActiva = activa === p.id
-          return (
-            <li key={p.id} className="flex-1">
-              <button
-                type="button"
-                onClick={() => onElegir(p.id)}
-                aria-current={esActiva ? 'page' : undefined}
-                className={`relative flex min-h-16 w-full flex-col items-center justify-center gap-0.5 text-sm font-semibold ${
-                  esActiva ? 'text-brand-700' : 'text-neutral-600'
-                }`}
-              >
-                <Icono nombre={p.icono} className="h-6 w-6" />
-                {p.texto}
-                {esActiva && <span aria-hidden="true" className="absolute inset-x-6 bottom-0 h-0.5 rounded-full bg-brand-600" />}
-              </button>
-            </li>
-          )
-        })}
+      <ul className="mx-auto flex max-w-lg md:max-w-2xl">
+        {PESTANAS.map((p) => (
+          <li key={p.id} className="flex-1">
+            <NavLink
+              to={RUTAS_PANEL[p.id]}
+              end
+              className={({ isActive }) =>
+                `relative flex min-h-16 w-full flex-col items-center justify-center gap-0.5 text-xs font-semibold ${
+                  isActive ? 'text-brand-700' : 'text-neutral-600'
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <Icono nombre={p.icono} className="h-6 w-6" />
+                  {p.texto}
+                  {isActive && <span aria-hidden="true" className="absolute inset-x-5 bottom-0 h-1 rounded-full bg-brand-600" />}
+                </>
+              )}
+            </NavLink>
+          </li>
+        ))}
       </ul>
     </nav>
   )

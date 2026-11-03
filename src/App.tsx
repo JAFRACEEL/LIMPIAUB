@@ -140,7 +140,7 @@ function App() {
           }
         />
         <Route
-          path="/panel"
+          path="/panel/*"
           element={
             <RutaProtegida rolRequerido="trabajador">
               <Panel />

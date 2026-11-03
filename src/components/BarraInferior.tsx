@@ -15,7 +15,7 @@ const ITEMS = [
 /** Navegación principal del cliente en el celular: tres destinos, siempre a mano. */
 export function BarraInferior() {
   return (
-    <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 border-t border-neutral-200/70 bg-white/95 shadow-[0_-8px_20px_-12px_rgb(120_53_15/0.3)] backdrop-blur">
+    <nav aria-label="Principal" className="fixed inset-x-0 bottom-0 z-20 pb-[env(safe-area-inset-bottom)] border-t border-neutral-200/70 bg-white/95 shadow-[0_-8px_20px_-12px_rgb(120_53_15/0.3)] backdrop-blur">
       <ul className="mx-auto flex max-w-lg">
         {ITEMS.map((item) => (
           <li key={item.a} className="flex-1">

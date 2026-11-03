@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
@@ -9,20 +9,10 @@ import { calcularComision, seSolapan } from '../lib/calculos'
 import { tieneSuscripcionGuardada } from '../lib/push'
 import { activarSonido, audioListo, detenerAlarma, iniciarAlarma, prepararSonido, reproducirSonidoAlerta } from '../lib/sonido'
 import { FormularioCalificacion } from '../components/FormularioCalificacion'
-import { EditarPerfilTrabajador } from '../components/EditarPerfilTrabajador'
-import {
-  BarraProfesional,
-  BurbujaIcono,
-  Estadistica,
-  Ganancia,
-  Icono,
-  TarjetaInterruptor,
-  TarjetaPerfil,
-  type PestanaProfesional,
-} from '../components/PanelProfesional'
+import { BarraProfesional } from '../components/PanelProfesional'
+import { AjustesVista, GananciasVista, InicioVista, type DatosGanancias } from '../components/panel/VistasPanel'
 import { cerrarSesion } from '../lib/sesion'
-import { ofreceKitDeLimpieza } from '../lib/panelProfesional'
-import { formatoSoles, RECARGO_KIT } from '../lib/precios'
+import { netoDeReserva, ofreceKitDeLimpieza, proximoTrabajo, RUTAS_PANEL, vistaDePanel } from '../lib/panelProfesional'
 import { DetallesServicioVista } from '../components/DetallesServicioVista'
 import type { DetallesServicio } from '../lib/preguntasServicio'
 import { PedidoEntranteOverlay, type PedidoEntranteOverlayData } from '../components/PedidoEntranteOverlay'
@@ -39,20 +29,25 @@ function vibrar() {
 export function Panel() {
   const { session, perfil } = useAuth()
   const [editando, setEditando] = useState(false)
-  const [pestana, setPestana] = useState<PestanaProfesional>('panel')
   const [params, setParams] = useSearchParams()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [trabajador, setTrabajador] = useState<Trabajador | null>(null)
   const [reservasPropias, setReservasPropias] = useState<Reserva[]>([])
   const [pedidosAbiertos, setPedidosAbiertos] = useState<PedidoAbierto[]>([])
   const [postulaciones, setPostulaciones] = useState<Record<string, PedidoAbierto>>({})
   const [calificadas, setCalificadas] = useState<Set<string>>(new Set())
-  const [ganancias, setGanancias] = useState({ semana: 0, mes: 0 })
+  const [ganancias, setGanancias] = useState<DatosGanancias | null>(null)
+  const [errorGanancias, setErrorGanancias] = useState(false)
+  const [errorReservas, setErrorReservas] = useState(false)
   const [prestamo, setPrestamo] = useState<PrestamoKit | null>(null)
   const [movimientosPrestamo, setMovimientosPrestamo] = useState<PrestamoKitMovimiento[]>([])
   const [contactosClientes, setContactosClientes] = useState<Record<string, { nombre: string; telefono: string }>>({})
   const [cargando, setCargando] = useState(true)
-  const [actualizando, setActualizando] = useState(false)
+  const [guardandoDisponible, setGuardandoDisponible] = useState(false)
+  const [guardandoKit, setGuardandoKit] = useState(false)
+  const [errorDisponible, setErrorDisponible] = useState<string | null>(null)
+  const [errorAjustes, setErrorAjustes] = useState<string | null>(null)
   const [procesando, setProcesando] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [tieneNotificaciones, setTieneNotificaciones] = useState<boolean | null>(null)
@@ -68,7 +63,6 @@ export function Panel() {
   const primeraCargaRef = useRef(true)
   const trabajadorRef = useRef<Trabajador | null>(null)
   const idPedidoActualRef = useRef<string | null>(null)
-  const refMisServicios = useRef<HTMLElement | null>(null)
 
   const cargarTrabajador = useCallback(async () => {
     if (!session) return null
@@ -84,11 +78,17 @@ export function Panel() {
 
   const cargarReservasPropias = useCallback(async () => {
     if (!session) return
-    const { data } = await supabase
+    const { data, error: errorCarga } = await supabase
       .from('reservas')
       .select('*')
       .eq('trabajador_id', session.user.id)
       .order('creado_en', { ascending: false })
+    // Si falla la carga se conserva lo último que se vio y se avisa: no se muestra como "sin trabajos".
+    if (errorCarga) {
+      setErrorReservas(true)
+      return
+    }
+    setErrorReservas(false)
     setReservasPropias((data as Reserva[]) ?? [])
   }, [session])
 
@@ -130,23 +130,31 @@ export function Panel() {
 
   const cargarGanancias = useCallback(async () => {
     if (!session) return
-    const { data } = await supabase
+    const { data, error: errorCarga } = await supabase
       .from('reservas')
-      .select('total, comision_pct, recargo_materiales, fecha')
+      .select('id, servicio, total, comision_pct, recargo_materiales, fecha')
       .eq('trabajador_id', session.user.id)
       .eq('estado', 'completada')
+      .order('fecha', { ascending: false })
+    // Un error de carga no es "S/ 0.00": se marca el error y la vista ofrece reintentar.
+    if (errorCarga || !data) {
+      setErrorGanancias(true)
+      return
+    }
     const inicioSemana = inicioSemanaLima()
     const inicioMes = inicioMesLima()
     let semana = 0
     let mes = 0
-    for (const r of data ?? []) {
-      if (r.total == null) continue
-      const subtotalServicio = r.total - r.recargo_materiales
-      const { netoTrabajadora } = calcularComision(subtotalServicio, r.comision_pct, r.recargo_materiales)
-      if (r.fecha >= inicioMes) mes += netoTrabajadora
-      if (r.fecha >= inicioSemana) semana += netoTrabajadora
+    const recientes: DatosGanancias['recientes'] = []
+    for (const r of data) {
+      const neto = netoDeReserva(r)
+      if (neto == null) continue
+      if (r.fecha >= inicioMes) mes += neto
+      if (r.fecha >= inicioSemana) semana += neto
+      if (recientes.length < 10) recientes.push({ id: r.id, servicio: r.servicio, fecha: r.fecha, neto })
     }
-    setGanancias({ semana, mes })
+    setErrorGanancias(false)
+    setGanancias({ semana, mes, recientes })
   }, [session])
 
   const cargarPrestamo = useCallback(async () => {
@@ -226,11 +234,11 @@ export function Panel() {
 
   useEffect(() => {
     if (params.get('editar') !== '1' || !trabajador) return
+    // Enlace antiguo /panel?editar=1: la edición ahora vive en Ajustes.
     setEditando(true)
-    setPestana('perfil')
     setParams({}, { replace: true })
-    window.setTimeout(() => document.getElementById('editar-perfil')?.scrollIntoView({ block: 'start' }), 0)
-  }, [params, trabajador, setParams])
+    navigate(RUTAS_PANEL.ajustes, { replace: true })
+  }, [params, trabajador, setParams, navigate])
 
   useEffect(() => {
     if (!session) return
@@ -446,8 +454,8 @@ export function Panel() {
 
   async function alternarDisponible() {
     if (!trabajador) return
-    setActualizando(true)
-    setError(null)
+    setGuardandoDisponible(true)
+    setErrorDisponible(null)
     const nuevoValor = !trabajador.disponible_ahora
     const { error: errorUpdate } = await supabase
       .from('trabajadores')
@@ -455,13 +463,13 @@ export function Panel() {
       .eq('id', trabajador.id)
 
     if (errorUpdate) {
-      setError(traducirError(errorUpdate))
+      setErrorDisponible(`No pudimos guardar tu disponibilidad. ${traducirError(errorUpdate)}`)
     } else {
       const actualizado = { ...trabajador, disponible_ahora: nuevoValor }
       setTrabajador(actualizado)
       cargarPedidosAbiertos(actualizado.habilitado_trabajar)
     }
-    setActualizando(false)
+    setGuardandoDisponible(false)
   }
 
   async function verFotoReferencia(ruta: string | null) {
@@ -476,17 +484,17 @@ export function Panel() {
 
   async function alternarKitPropio() {
     if (!trabajador) return
-    setActualizando(true)
-    setError(null)
+    setGuardandoKit(true)
+    setErrorAjustes(null)
     const nuevoValor = !trabajador.kit_propio
     const { error: errorUpdate } = await supabase
       .from('trabajadores')
       .update({ kit_propio: nuevoValor })
       .eq('id', trabajador.id)
 
-    if (errorUpdate) setError(traducirError(errorUpdate))
+    if (errorUpdate) setErrorAjustes(`No pudimos guardar el cambio. ${traducirError(errorUpdate)}`)
     else setTrabajador({ ...trabajador, kit_propio: nuevoValor })
-    setActualizando(false)
+    setGuardandoKit(false)
   }
 
   async function postularme(pedido: PedidoAbierto): Promise<boolean> {
@@ -551,50 +559,47 @@ export function Panel() {
     )
   }
 
+  const vista = vistaDePanel(pathname)
+  if (!vista) return <Navigate to={RUTAS_PANEL.inicio} replace />
+
   const enCurso = reservasPropias.filter(
     (r) => r.estado === 'aceptada' || r.estado === 'en_camino' || r.estado === 'en_curso',
   )
   const completadas = reservasPropias.filter((r) => r.estado === 'completada' && !calificadas.has(r.id))
   const postulacionesLista = Object.values(postulaciones)
   const hayServicios = enCurso.length > 0 || postulacionesLista.length > 0 || completadas.length > 0
-  const resumenServicios = hayServicios
-    ? [
-        enCurso.length > 0 && `${enCurso.length} en curso`,
-        postulacionesLista.length > 0 && `${postulacionesLista.length} esperando respuesta`,
-        completadas.length > 0 && `${completadas.length} por calificar`,
-      ]
-        .filter(Boolean)
-        .join(' · ')
-    : 'Revisa tus trabajos y postulaciones'
 
   async function salir() {
     await cerrarSesion()
     navigate('/login')
   }
 
-  function elegirPestana(p: PestanaProfesional) {
-    setPestana(p)
-    if (p === 'panel') window.scrollTo({ top: 0 })
-    else if (p === 'servicios') irAMisServicios()
-    else abrirEdicion()
-  }
-
-  function abrirEdicion() {
-    setEditando(true)
-    setPestana('perfil')
-    window.setTimeout(() => document.getElementById('editar-perfil')?.scrollIntoView({ block: 'start' }), 0)
-  }
-
-  function irAMisServicios() {
-    const destino = refMisServicios.current
-    if (!destino) return
-    setPestana('servicios')
-    destino.scrollIntoView({ block: 'start' })
-    destino.focus({ preventScroll: true })
-  }
+  const avisosInicio = (
+    <>
+      {error && (
+        <p role="alert" className="yavi-aviso" data-tipo="error">
+          {error}
+        </p>
+      )}
+      {!trabajador.habilitado_trabajar && (
+        <div className="yavi-aviso" data-tipo="alerta">
+          {!trabajador.verificado
+            ? 'Tu perfil está en revisión. Un administrador de YAVI verificará tus datos antes de que puedas activar "Disponible ahora".'
+            : trabajador.estado_migratorio === 'rechazado'
+              ? 'No pudimos validar tu autorización para trabajar en Perú. Escríbenos para revisar tu caso.'
+              : 'Tu perfil está verificado, pero tu autorización para trabajar en Perú aún está pendiente de validación. Te avisaremos apenas esté lista.'}
+        </div>
+      )}
+      {trabajador.nacionalidad === 'extranjera' &&
+        trabajador.estado_migratorio !== 'validado' &&
+        (!trabajador.doc_migratorio_frontal_ruta || !trabajador.doc_migratorio_constancia_ruta) && (
+          <CompletarDocumentosMigratorios trabajadorId={trabajador.id} onListo={cargarTrabajador} />
+        )}
+    </>
+  )
 
   return (
-    <div className="mx-auto max-w-lg px-4 pb-28 pt-4">
+    <div className="mx-auto max-w-lg px-4 pb-[calc(6.5rem+env(safe-area-inset-bottom))] pt-3 md:max-w-2xl">
       {audioBloqueado && (
         <button
           type="button"
@@ -616,22 +621,6 @@ export function Panel() {
         onVerFoto={verFotoReferencia}
       />
 
-      <h1 className="mb-3 mt-1 text-3xl font-extrabold text-neutral-900">Mi panel</h1>
-
-      <TarjetaPerfil
-        nombre={perfil?.nombre ?? ''}
-        fotoUrl={perfil?.foto_url ?? null}
-        servicios={trabajador.servicios}
-        editando={editando}
-        onEditar={abrirEdicion}
-      />
-      <EditarPerfilTrabajador
-        trabajador={trabajador}
-        onActualizado={cargarTrabajador}
-        abierto={editando}
-        onCambiarAbierto={setEditando}
-      />
-
       <div className="pointer-events-none fixed inset-x-0 top-24 z-20 flex flex-col items-center gap-2 px-4">
         {toasts.map((t) => (
           <div key={t.id} className="rounded-lg bg-neutral-900 px-4 py-2 text-sm text-white shadow-lg">
@@ -640,163 +629,71 @@ export function Panel() {
         ))}
       </div>
 
-      {!trabajador.habilitado_trabajar ? (
-        <div className="yavi-aviso mt-3" data-tipo="alerta">
-          {!trabajador.verificado
-            ? 'Tu perfil está en revisión. Un administrador de YAVI verificará tus datos antes de que puedas activar "Disponible ahora".'
-            : trabajador.estado_migratorio === 'rechazado'
-              ? 'No pudimos validar tu autorización para trabajar en Perú. Escríbenos para revisar tu caso.'
-              : 'Tu perfil está verificado, pero tu autorización para trabajar en Perú aún está pendiente de validación. Te avisaremos apenas esté lista.'}
-        </div>
-      ) : null}
-
-      {trabajador.nacionalidad === 'extranjera' &&
-        trabajador.estado_migratorio !== 'validado' &&
-        (!trabajador.doc_migratorio_frontal_ruta || !trabajador.doc_migratorio_constancia_ruta) && (
-          <CompletarDocumentosMigratorios trabajadorId={trabajador.id} onListo={cargarTrabajador} />
-        )}
-
-      <div className="mt-3 flex flex-col gap-3">
-        {trabajador.habilitado_trabajar && tieneNotificaciones === false && (
-          <div className="yavi-aviso" data-tipo="alerta">
-            <p className="font-semibold">Disponible ahora</p>
-            <p className="mt-1">
-              Activa las notificaciones para recibir pedidos: son la única forma de enterarte al toque cuando llega
-              uno, aunque tengas la app cerrada.
-            </p>
-            <Link
-              to="/activar-notificaciones"
-              className="mt-3 inline-block rounded-xl bg-amber-900 px-3 py-2 text-sm font-semibold text-white"
-            >
-              Activar notificaciones
-            </Link>
-          </div>
-        )}
-
-        {trabajador.habilitado_trabajar && tieneNotificaciones !== false && (
-          <TarjetaInterruptor
-            id="interruptor-disponible"
-            icono={
-              <BurbujaIcono tono="verde">
-                <span className={`h-4 w-4 rounded-full ${trabajador.disponible_ahora ? 'bg-green-600' : 'bg-neutral-400'}`} />
-              </BurbujaIcono>
-            }
-            titulo="Disponible ahora"
-            texto={
-              trabajador.disponible_ahora
-                ? 'Visible para nuevos pedidos'
-                : 'No apareces en la búsqueda. Los pedidos programados te siguen llegando.'
-            }
-            activo={trabajador.disponible_ahora}
-            onCambiar={alternarDisponible}
-            deshabilitado={actualizando || tieneNotificaciones === null}
-          />
-        )}
-
-        {ofreceKitDeLimpieza(trabajador.servicios) && (
-          <TarjetaInterruptor
-            id="interruptor-kit"
-            icono={
-              <BurbujaIcono>
-                <Icono nombre="kit" className="h-5 w-5" />
-              </BurbujaIcono>
-            }
-            titulo="Mi kit de limpieza"
-            texto={`Ofrécelo cuando el pedido lo solicite (+${formatoSoles(RECARGO_KIT).replace('.00', '')})`}
-            info={`Si el cliente no tiene materiales, puedes ofrecer llevar tu kit por un recargo de ${formatoSoles(RECARGO_KIT)}, de los cuales S/ 13 son para ti.`}
-            activo={trabajador.kit_propio}
-            onCambiar={alternarKitPropio}
-            deshabilitado={actualizando}
-          />
-        )}
-      </div>
-
-      {error && (
-        <p role="alert" className="yavi-aviso mt-3" data-tipo="error">
-          {error}
-        </p>
+      {vista === 'inicio' && (
+        <InicioVista
+          nombre={perfil?.nombre ?? ''}
+          fotoUrl={perfil?.foto_url ?? null}
+          trabajador={trabajador}
+          proximo={proximoTrabajo(reservasPropias)}
+          errorReservas={errorReservas}
+          onReintentarReservas={cargarReservasPropias}
+          ganancias={ganancias}
+          errorGanancias={errorGanancias}
+          onReintentarGanancias={cargarGanancias}
+          tieneNotificaciones={tieneNotificaciones}
+          guardandoDisponible={guardandoDisponible}
+          errorDisponible={errorDisponible}
+          onAlternarDisponible={alternarDisponible}
+          avisos={avisosInicio}
+        />
       )}
 
-      <dl className="mt-3 grid grid-cols-3 gap-2.5">
-        <Estadistica icono="monedas" titulo="Tarifa" valor={`S/ ${trabajador.tarifa_hora.toFixed(2)}`} />
-        <Estadistica icono="documento" titulo="Trabajos" valor={trabajador.trabajos_completados} />
-        <Estadistica
-          icono="estrella"
-          titulo="Calificación"
-          valor={
-            trabajador.rating_n > 0
-              ? `${trabajador.rating_avg.toFixed(1)} ★ · ${trabajador.rating_n} ${trabajador.rating_n === 1 ? 'reseña' : 'reseñas'}`
-              : 'Sin reseñas'
-          }
+      {vista === 'ganancias' && (
+        <GananciasVista
+          ganancias={ganancias}
+          errorGanancias={errorGanancias}
+          onReintentar={cargarGanancias}
+          prestamo={prestamo}
+          movimientosPrestamo={movimientosPrestamo}
         />
-      </dl>
+      )}
 
-      <section aria-labelledby="titulo-ganancias" className="mt-5">
-        <h2 id="titulo-ganancias" className="mb-3 text-2xl font-extrabold text-neutral-900">
-          Mis ganancias
-        </h2>
-        <dl className="grid grid-cols-2 gap-3">
-          <Ganancia icono="tendencia" titulo="Esta semana" monto={`S/ ${ganancias.semana.toFixed(2)}`} />
-          <Ganancia icono="calendario" titulo="Este mes" monto={`S/ ${ganancias.mes.toFixed(2)}`} />
-        </dl>
-        <p className="mt-2 text-sm leading-snug text-neutral-700">
-          Después de la comisión de YAVI. Incluye S/ 13 del kit cuando corresponde.
-        </p>
+      {vista === 'ajustes' && (
+        <AjustesVista
+          nombre={perfil?.nombre ?? ''}
+          fotoUrl={perfil?.foto_url ?? null}
+          correo={session?.user.email ?? ''}
+          trabajador={trabajador}
+          editando={editando}
+          onCambiarEditando={setEditando}
+          onPerfilActualizado={cargarTrabajador}
+          ofreceKit={ofreceKitDeLimpieza(trabajador.servicios)}
+          guardandoKit={guardandoKit}
+          errorAjustes={errorAjustes}
+          onAlternarKit={alternarKitPropio}
+          tieneNotificaciones={tieneNotificaciones}
+          onSalir={salir}
+        />
+      )}
 
-        {prestamo && (
-          <div className="yavi-aviso mt-3" data-tipo="alerta">
-            <p className="font-medium">
-              {prestamo.estado === 'emitido' || prestamo.estado === 'retirado'
-                ? `Kit a crédito: saldo pendiente S/ ${prestamo.saldo.toFixed(2)} de S/ ${prestamo.monto.toFixed(2)}`
-                : prestamo.estado === 'pagado'
-                  ? `Kit a crédito: pagado ✓ (S/ ${prestamo.monto.toFixed(2)})`
-                  : 'Kit a crédito: marcado como perdido'}
+      {vista === 'servicios' && (
+        <section aria-labelledby="titulo-mis-servicios">
+          <h1 id="titulo-mis-servicios" className="mb-1 pt-1 text-2xl font-extrabold text-neutral-900">
+            Servicios
+          </h1>
+          {errorReservas && (
+            <div role="alert" className="yavi-aviso mt-2 flex flex-wrap items-center justify-between gap-2" data-tipo="error">
+              <span>No pudimos cargar tus servicios.</span>
+              <button type="button" onClick={cargarReservasPropias} className="rounded-xl border border-red-300 bg-white px-3 py-1.5 text-sm font-bold text-red-800">
+                Reintentar
+              </button>
+            </div>
+          )}
+          {!hayServicios && !errorReservas && (
+            <p className="yavi-aviso" data-tipo="info">
+              Aún no tienes servicios en curso. Cuando una clienta te elija, aparecerá aquí.
             </p>
-            {movimientosPrestamo.length > 0 && (
-              <ul className="mt-2 flex flex-col gap-1 text-xs text-neutral-700">
-                {movimientosPrestamo.map((m) => (
-                  <li key={m.id}>
-                    {new Date(m.creado_en).toLocaleDateString('es-PE')} — se descontó S/ {m.monto.toFixed(2)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </section>
-
-      <button
-        type="button"
-        onClick={irAMisServicios}
-        aria-controls="mis-servicios"
-        className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-brand-700 px-4 py-3.5 text-base font-bold"
-      >
-        Ver mis servicios
-        <span aria-hidden="true" className="text-xl leading-none">
-          ›
-        </span>
-        <span className="sr-only">({resumenServicios})</span>
-      </button>
-
-      <button type="button" onClick={salir} className="yavi-boton-secundario mt-3 w-full py-3.5! text-base!">
-        Cerrar sesión
-      </button>
-
-      <section
-        id="mis-servicios"
-        ref={refMisServicios}
-        tabIndex={-1}
-        aria-labelledby="titulo-mis-servicios"
-        className="mt-8 scroll-mt-24 outline-none"
-      >
-        <h2 id="titulo-mis-servicios" className="mb-1 text-lg font-bold text-neutral-900">
-          Mis servicios
-        </h2>
-        {!hayServicios && (
-          <p className="yavi-aviso" data-tipo="info">
-            Aún no tienes servicios en curso. Cuando una clienta te elija, aparecerá aquí.
-          </p>
-        )}
+          )}
       {enCurso.length > 0 && (
         <Seccion titulo="Trabajo en curso" nivel={3} className="mt-4">
           {enCurso.map((r) => (
@@ -864,9 +761,10 @@ export function Panel() {
           ))}
         </Seccion>
       )}
-      </section>
+        </section>
+      )}
 
-      <BarraProfesional activa={pestana} onElegir={elegirPestana} />
+      <BarraProfesional />
     </div>
   )
 }
