@@ -16,7 +16,12 @@ export interface PedidoEntranteOverlayData {
   horas: number
   conMateriales: boolean
   ventanaCierraEn: string | null
-  pagoNeto: number
+  /** null = no hay monto automático (cotización o precio sin configurar). */
+  pagoNeto: number | null
+  /** Texto que reemplaza a la duración cuando el cobro no es por horas. */
+  duracionTexto?: string
+  /** Aviso bajo el pago cuando no hay monto automático. */
+  avisoPago?: string
   advertencia?: string | null
 }
 
@@ -83,7 +88,7 @@ export function PedidoEntranteOverlay({
             {pedido.tipo === 'directo' ? 'Pedido directo' : 'Pedido cerca de ti'}
           </span>
           <span className="block truncate text-sm font-semibold">
-            {pedido.servicio} · S/ {pedido.pagoNeto.toFixed(2)}
+            {pedido.servicio}{pedido.pagoNeto != null ? ` · S/ ${pedido.pagoNeto.toFixed(2)}` : ''}
           </span>
         </span>
         {cuentaRegresiva && <span className="shrink-0 text-xs font-bold">⏱ {cuentaRegresiva}</span>}
@@ -150,8 +155,17 @@ export function PedidoEntranteOverlay({
 
           <div className="flex w-full flex-col items-center gap-4">
             <div className="text-center">
-              <p className="text-4xl font-extrabold leading-none">S/ {pedido.pagoNeto.toFixed(2)}</p>
-              <p className="mt-1 text-sm text-brand-ink">Pago neto estimado</p>
+              {pedido.pagoNeto != null ? (
+                <>
+                  <p className="text-4xl font-extrabold leading-none">S/ {pedido.pagoNeto.toFixed(2)}</p>
+                  <p className="mt-1 text-sm text-brand-ink">Pago neto estimado</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-extrabold leading-tight">Tú fijas el precio</p>
+                  <p className="mt-1 text-sm text-brand-ink">{pedido.avisoPago ?? 'Envías tu propuesta después de aceptar.'}</p>
+                </>
+              )}
             </div>
 
             <div className="w-full rounded-2xl bg-white/30 px-4 py-3 text-sm">
@@ -159,7 +173,7 @@ export function PedidoEntranteOverlay({
               {pedido.subtipoServicio && <Fila etiqueta="Detalle" valor={pedido.subtipoServicio} />}
               <Fila etiqueta="Zona" valor={pedido.zona} />
               <Fila etiqueta="Fecha" valor={`${pedido.fecha} · ${pedido.hora.slice(0, 5)}`} />
-              <Fila etiqueta="Duración" valor={`${pedido.horas} horas`} />
+              <Fila etiqueta="Duración" valor={pedido.duracionTexto ?? `${pedido.horas} horas`} />
               {pedido.conMateriales && <Fila etiqueta="Materiales" valor="Llevas tu kit (+S/ 18)" />}
               {pedido.advertencia && (
                 <p className="mt-2 border-t border-brand-ink/25 pt-2 font-bold text-brand-ink">

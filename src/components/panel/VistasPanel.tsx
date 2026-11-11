@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Avatar, BurbujaIcono, Icono, Interruptor, TarjetaInterruptor } from '../PanelProfesional'
 import { EditarPerfilTrabajador } from '../EditarPerfilTrabajador'
+import { MisPrecios } from '../MisPrecios'
 import { especialidad, RUTAS_PANEL, resumenCalificacion } from '../../lib/panelProfesional'
 import { formatoSoles, RECARGO_KIT } from '../../lib/precios'
 import type { PrestamoKit, PrestamoKitMovimiento, Reserva, Trabajador } from '../../types'
@@ -312,6 +313,7 @@ export function AjustesVista({
   errorAjustes,
   onAlternarKit,
   tieneNotificaciones,
+  onPreciosCambiados,
   onSalir,
 }: {
   nombre: string
@@ -326,6 +328,7 @@ export function AjustesVista({
   errorAjustes: string | null
   onAlternarKit: () => void
   tieneNotificaciones: boolean | null
+  onPreciosCambiados?: () => void
   onSalir: () => void
 }) {
   return (
@@ -373,6 +376,10 @@ export function AjustesVista({
           abierto={editando}
           onCambiarAbierto={onCambiarEditando}
         />
+      </Grupo>
+
+      <Grupo titulo="Mis precios">
+        <MisPrecios trabajadorId={trabajador.id} servicios={trabajador.servicios} onCambio={onPreciosCambiados} />
       </Grupo>
 
       {ofreceKit && (

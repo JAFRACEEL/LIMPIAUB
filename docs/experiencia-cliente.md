@@ -35,7 +35,9 @@ Cuatro pestañas con ruta propia (`RUTAS_PANEL` en `src/lib/panelProfesional.ts`
 - **Ganancias**: semana, mes, últimos 10 servicios completados (`netoDeReserva`, misma fórmula de comisión de siempre) y el saldo del kit a crédito. Sigue llamándose "Ganancias": es ganancia acumulada, no saldo para gastar.
 - **Ajustes**: perfil, foto, servicios, zonas y tarifa por hora (`EditarPerfilTrabajador`, sin cambios de validación), kit de limpieza y sus condiciones, estado de notificaciones y cierre de sesión.
 - Un error de carga de reservas o ganancias muestra "No pudimos cargar…" con "Reintentar"; nunca se presenta como S/ 0.00 ni como "sin trabajos".
-- Las **tarifas por servicio** (`precios_profesional`) y el envío de **propuestas** NO tienen pantalla todavía, así que Ajustes no las muestra. `propuestas_activas` sigue en `false`.
+- **Mis precios** (Ajustes, `MisPrecios`): el profesional fija el precio fijo o de diagnóstico de cada oficio en `precios_profesional` (por trabajo o por unidad, alcance, incluye / no incluye; puede pausar o quitar). Solo aparece para servicios con esas modalidades; limpieza y lavado se cobran por horas. Lógica pura y pruebas en `src/lib/preciosProfesional.ts`.
+- **Enviar propuesta** (`FormularioPropuesta`): en "Tus postulaciones", los pedidos en cotización muestran el formulario (mano de obra, materiales, movilidad, otros, alcance) que llama a `enviar_propuesta`; si ya hay una vigente se muestra su total. Ambas pantallas solo se activan con `VITE_PROPUESTAS_ACTIVAS=1`.
+- Con propuestas activas el panel lee `v_pedidos_abiertos_todas`. El aviso de pedido entrante no inventa montos: en cotización dice "Tú fijas el precio" y en fijo/diagnóstico usa el precio configurado. Los pedidos fijo/diagnóstico sin precio activo no entran a la cola (el servidor los rechazaría) y el Panel recarga los precios cuando se editan en Mis precios.
 - La barra superior del profesional solo lleva logo y notificaciones; la barra inferior respeta el área segura del móvil (`viewport-fit=cover`, también en la barra del cliente).
 
 ## Borrador del pedido
@@ -79,7 +81,7 @@ Se cobra por horas, así que se delimitó: solo colgar cuadros, accesorios livia
 **Esto es un filtro de palabras, no una garantía.** Que el texto no contenga palabras bloqueadas **no demuestra** que el trabajo pertenezca al alcance permitido: una descripción que no nombre el oficio ("se me apagó todo en la cocina", "cambiar eso que está suelto en la pared") pasa, y una palabra bloqueada usada en otro sentido ("pintura" de un cuadro) se rechaza aunque sea un arreglo menor. El servidor no entiende el texto. La barrera real está en las personas: quien acepta el trabajo ve la descripción y puede rechazarlo, y los oficios con forma de cobro deshabilitada no se pueden contratar por ninguna otra vía. Si en la práctica se cuelan oficios, la corrección es endurecer el servicio (por ejemplo, exigir que el profesional confirme el alcance antes de aceptar), no ampliar la lista de palabras.
 
 ## Dependencias de la etapa del profesional
-- Pantalla para configurar `precios_profesional` y para enviar propuestas (`enviar_propuesta`); leer `v_pedidos_abiertos_todas`.
+- ~~Pantalla para configurar `precios_profesional` y para enviar propuestas; leer `v_pedidos_abiertos_todas`~~ (hecho el 2026-11-11). Falta probar el envío de propuestas con una cuenta real en la vista previa. Presupuesto de reparación y adicionales (`enviar_propuesta` con otros tipos) siguen sin pantalla.
 - Un panel que consulte la lista de pedidos sin depender de "disponible ahora" (ya corregido para "programados"); los avisos push de pedidos programados siguen yendo solo a quienes están disponibles ahora.
 - Datos reales de cobro (Yape, Plin, banco) en `DATOS_PAGO`.
 - Profesionales de Aire acondicionado registrados.

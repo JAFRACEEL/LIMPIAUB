@@ -16,7 +16,38 @@ import { netoDeReserva, ofreceKitDeLimpieza, proximoTrabajo, RUTAS_PANEL, vistaD
 import { DetallesServicioVista } from '../components/DetallesServicioVista'
 import type { DetallesServicio } from '../lib/preguntasServicio'
 import { PedidoEntranteOverlay, type PedidoEntranteOverlayData } from '../components/PedidoEntranteOverlay'
+import { subtotalParaPedido, tienePrecioParaPedido, type PrecioProfesional } from '../lib/preciosProfesional'
+import { FormularioPropuesta } from '../components/FormularioPropuesta'
 import type { PedidoAbierto, PrestamoKit, PrestamoKitMovimiento, Reserva, Trabajador } from '../types'
+
+/** Igual que en modalidades.ts: solo cuando se activan las propuestas el panel lee pedidos de todas las modalidades. */
+const PROPUESTAS_ACTIVAS = import.meta.env.VITE_PROPUESTAS_ACTIVAS === '1'
+
+function datosPagoAbierto(
+  p: PedidoAbierto,
+  trabajador: Trabajador,
+  precios: PrecioProfesional[],
+): Pick<PedidoEntranteOverlayData, 'pagoNeto' | 'duracionTexto' | 'avisoPago'> {
+  const modalidad = p.modalidad_precio ?? 'horas'
+  const precio = precios.find((x) => x.activo && x.servicio === p.servicio && x.modalidad === modalidad) ?? null
+  const subtotal = subtotalParaPedido(modalidad, {
+    tarifaHora: trabajador.tarifa_hora,
+    horas: p.horas,
+    personas: p.personas,
+    cantidad: p.cantidad,
+    precio,
+  })
+  const pagoNeto = subtotal == null ? null : calcularComision(subtotal, p.comision_pct, p.recargo_materiales).netoTrabajadora
+  if (modalidad === 'horas') return { pagoNeto }
+  return {
+    pagoNeto,
+    duracionTexto: 'A coordinar con el cliente',
+    avisoPago:
+      modalidad === 'cotizacion'
+        ? 'Envías tu propuesta después de aceptar.'
+        : 'Configura tu precio en Ajustes → Mis precios para poder aceptar.',
+  }
+}
 
 function vibrar() {
   try {
@@ -35,6 +66,7 @@ export function Panel() {
   const [trabajador, setTrabajador] = useState<Trabajador | null>(null)
   const [reservasPropias, setReservasPropias] = useState<Reserva[]>([])
   const [pedidosAbiertos, setPedidosAbiertos] = useState<PedidoAbierto[]>([])
+  const [preciosPropios, setPreciosPropios] = useState<PrecioProfesional[]>([])
   const [postulaciones, setPostulaciones] = useState<Record<string, PedidoAbierto>>({})
   const [calificadas, setCalificadas] = useState<Set<string>>(new Set())
   const [ganancias, setGanancias] = useState<DatosGanancias | null>(null)
@@ -101,7 +133,7 @@ export function Panel() {
       return
     }
     const { data } = await supabase
-      .from('v_pedidos_abiertos')
+      .from(PROPUESTAS_ACTIVAS ? 'v_pedidos_abiertos_todas' : 'v_pedidos_abiertos')
       .select('*')
       .order('creado_en', { ascending: true })
     const nuevos = (data as PedidoAbierto[]) ?? []
@@ -113,6 +145,15 @@ export function Panel() {
     pedidosAbiertosRef.current = nuevos
     setPedidosAbiertos(nuevos)
   }, [])
+
+  const cargarPreciosPropios = useCallback(async () => {
+    if (!session || !PROPUESTAS_ACTIVAS) return
+    const { data } = await supabase
+      .from('precios_profesional')
+      .select('id, servicio, modalidad, monto, unidad, alcance, incluye, no_incluye, activo')
+      .eq('trabajador_id', session.user.id)
+    setPreciosPropios((data as PrecioProfesional[]) ?? [])
+  }, [session])
 
   const cargarCalificadas = useCallback(async () => {
     if (!session) return
@@ -206,6 +247,7 @@ export function Panel() {
       cargarPedidosAbiertos(t?.habilitado_trabajar ?? false),
       cargarCalificadas(),
       cargarPostulaciones(),
+      cargarPreciosPropios(),
       cargarGanancias(),
       cargarPrestamo(),
       cargarContactosClientes(),
@@ -218,6 +260,7 @@ export function Panel() {
     cargarPedidosAbiertos,
     cargarCalificadas,
     cargarPostulaciones,
+    cargarPreciosPropios,
     cargarGanancias,
     cargarPrestamo,
     cargarContactosClientes,
@@ -343,6 +386,8 @@ export function Panel() {
     }
     for (const p of pedidosAbiertos) {
       if (descartadosAbiertos.has(p.id)) continue
+      // Sin precio activo el servidor rechazaría la aceptación: ni se ofrece.
+      if (!tienePrecioParaPedido(p.modalidad_precio, p.servicio, preciosPropios)) continue
       items.push({
         id: p.id,
         tipo: 'abierto',
@@ -357,8 +402,7 @@ export function Panel() {
         horas: p.horas,
         conMateriales: p.con_materiales,
         ventanaCierraEn: p.ventana_cierra_en,
-        pagoNeto: calcularComision(trabajador.tarifa_hora * p.horas * (p.personas ?? 1), p.comision_pct, p.recargo_materiales)
-          .netoTrabajadora,
+        ...datosPagoAbierto(p, trabajador, preciosPropios),
       })
     }
     items.sort((a, b) => {
@@ -368,7 +412,7 @@ export function Panel() {
       return av - bv
     })
     return items
-  }, [reservasPropias, pedidosAbiertos, descartadosAbiertos, trabajador])
+  }, [reservasPropias, pedidosAbiertos, descartadosAbiertos, trabajador, preciosPropios])
 
   const pedidoActual = colaEntrantes[0] ?? null
 
@@ -672,6 +716,7 @@ export function Panel() {
           errorAjustes={errorAjustes}
           onAlternarKit={alternarKitPropio}
           tieneNotificaciones={tieneNotificaciones}
+          onPreciosCambiados={cargarPreciosPropios}
           onSalir={salir}
         />
       )}
@@ -739,6 +784,7 @@ export function Panel() {
                 {p.servicio} · {p.zona} · {p.horas}h
               </p>
               <DetalleTrabajo reserva={p} onVerFoto={verFotoReferencia} />
+              {PROPUESTAS_ACTIVAS && p.modalidad_precio === 'cotizacion' && <FormularioPropuesta reservaId={p.id} />}
             </div>
           ))}
         </Seccion>

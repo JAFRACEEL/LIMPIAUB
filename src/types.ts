@@ -200,6 +200,7 @@ export interface PedidoAbierto {
   zona_ampliada: boolean
   creado_en: string
   personas?: number
+  cantidad?: number | null
   modalidad_precio?: ModalidadPrecio
   programacion?: 'ahora' | 'programada'
 }
