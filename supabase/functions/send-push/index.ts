@@ -15,7 +15,11 @@ interface Payload {
   titulo: string
   cuerpo: string
   url?: string
+  /** App destino: solo se envía a las suscripciones guardadas por esa app. Sin app válida no se envía nada. */
+  app?: string
 }
+
+const APPS = ['cliente', 'profesional', 'admin']
 
 const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') ?? ''
 const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') ?? ''
@@ -32,6 +36,18 @@ function secretosIguales(a: string, b: string): boolean {
   const largo = Math.max(a.length, b.length)
   for (let i = 0; i < largo; i++) diferencia |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0)
   return diferencia === 0
+}
+
+/** Ruta propia ("/panel") o enlace https completo al dominio de la app (lo arma fn_enviar_push); cualquier otra cosa -> "/". */
+function urlSegura(url: unknown): string {
+  if (typeof url !== 'string') return '/'
+  if (url.startsWith('/') && !url.startsWith('//')) return url
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' ? u.href : '/'
+  } catch {
+    return '/'
+  }
 }
 
 if (vapidPublicKey && vapidPrivateKey) {
@@ -78,9 +94,16 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ enviados: 0 }), { headers: { 'Content-Type': 'application/json' } })
   }
 
+  // Sin app destino válida no se envía nada: nunca "a todas las apps" (una ruta como /panel no existe en la app Cliente).
+  // Las suscripciones con app NULL (anteriores a la 0017) no coinciden con ningún valor y no reciben nada.
+  if (typeof payload.app !== 'string' || !APPS.includes(payload.app)) {
+    return new Response(JSON.stringify({ enviados: 0 }), { headers: { 'Content-Type': 'application/json' } })
+  }
+
   const { data: subs, error } = await supabase
     .from('push_subscriptions')
     .select('id, endpoint, p256dh, auth')
+    .eq('app', payload.app)
     .in('user_id', userIds)
 
   if (error) {
@@ -90,7 +113,7 @@ Deno.serve(async (req) => {
   const cuerpoNotificacion = JSON.stringify({
     titulo: payload.titulo,
     cuerpo: payload.cuerpo,
-    url: typeof payload.url === 'string' && payload.url.startsWith('/') ? payload.url : '/',
+    url: urlSegura(payload.url),
   })
 
   let enviados = 0

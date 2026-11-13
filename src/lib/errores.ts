@@ -10,7 +10,8 @@ export function traducirError(error: unknown): string {
   const mapa: Record<string, string> = {
     'Invalid login credentials': 'Correo o contraseña incorrectos.',
     'User already registered': 'Ya existe una cuenta con ese correo.',
-    'Email not confirmed': 'Debes confirmar tu correo antes de iniciar sesión.',
+    'Email not confirmed': 'Aún no confirmaste tu correo. Abre el enlace que te enviamos.',
+    'email rate limit exceeded': 'Se enviaron muchos correos seguidos. Espera unos minutos e inténtalo de nuevo.',
     'Password should be at least 6 characters': 'La contraseña debe tener al menos 6 caracteres.',
     'Unable to validate email address: invalid format': 'El correo no tiene un formato válido.',
     'For security purposes, you can only request this after': 'Por seguridad, espera unos segundos antes de reintentar.',
@@ -18,6 +19,8 @@ export function traducirError(error: unknown): string {
     'new row violates row-level security policy': 'No tienes permiso para hacer esta acción.',
     'Failed to fetch': 'No se pudo conectar con el servidor. Revisa tu internet.',
     'permission denied': 'No tienes permiso para hacer esta acción.',
+    'reservas_no_autocontratacion': 'No puedes contratarte a ti mismo.',
+    'No puedes postularte a tu propio pedido': 'No puedes postularte a tu propio pedido.',
     'violates check constraint': 'Revisa los datos: alguno no es válido.',
   }
 

@@ -14,7 +14,7 @@ Construye una web app tipo Uber para limpieza doméstica por horas en Iquitos, P
 ## Roles y flujos
 
 ### Registro / login
-- Supabase Auth email + contraseña. Al registrarse elige rol: Cliente o Trabajador. Crear fila en `perfiles` (y en `trabajadores` si aplica) en la misma transacción lógica.
+- Supabase Auth email + contraseña **con confirmación de correo** (ver `docs/confirmacion-de-correo.md`). `signUp` no crea nada más que el usuario de acceso; el enlace del correo vuelve a la misma app y deja la sesión iniciada. Cliente: su fila de `perfiles` se crea en el primer ingreso con rol `cliente` fijo (nunca desde `user_metadata`). Profesional: «Completar perfil de profesional» (con sesión) es el único lugar que crea `trabajadores` y sube documentos.
 - Campos cliente: nombre, celular, zona (select), dirección.
 - Campos trabajador: nombre, celular, DNI (8 dígitos), zona, servicios (multi), tarifa por hora (S/ 5-100), experiencia, antecedentes (vigente / en trámite / no), 2 referencias, foto (Storage bucket `fotos`, público de lectura), aceptación de verificación.
 - Zonas fijas: Iquitos centro, Punchana, Belén, San Juan Bautista, Moronacocha, Versalles / Sachachorro, Nanay / Bellavista, Quistococha, Otra.

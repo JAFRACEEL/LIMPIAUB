@@ -1,4 +1,6 @@
 import { supabase } from './supabase'
+import { APP, NOMBRE_APP } from './app'
+import { idsViejosDelMismoDispositivo, type FilaSuscripcion } from './pushReactivar'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
@@ -43,11 +45,18 @@ export async function obtenerSuscripcionActual(): Promise<PushSubscription | nul
   }
 }
 
+/** Las suscripciones de esta persona (para saber si le quedan avisos viejos, de antes de separar las apps). null = no se pudo leer. */
+export async function suscripcionesDe(userId: string): Promise<FilaSuscripcion[] | null> {
+  const { data, error } = await supabase.from('push_subscriptions').select('id, user_id, endpoint, app, user_agent').eq('user_id', userId)
+  return error ? null : ((data as FilaSuscripcion[] | null) ?? [])
+}
+
 export async function tieneSuscripcionGuardada(userId: string): Promise<boolean> {
   const { count } = await supabase
     .from('push_subscriptions')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', userId)
+    .eq('app', APP)
   return (count ?? 0) > 0
 }
 
@@ -64,6 +73,7 @@ export async function suscripcionLePerteneceA(userId: string): Promise<boolean> 
     .select('id')
     .eq('endpoint', suscripcion.endpoint)
     .eq('user_id', userId)
+    .eq('app', APP)   // una suscripción anterior a la 0017 (app vacía) no cuenta: hay que reactivarla en esta app
     .maybeSingle()
   return !!data
 }
@@ -73,7 +83,7 @@ export async function activarNotificaciones(userId: string): Promise<{ ok: boole
     return { ok: false, error: 'Este navegador no soporta notificaciones push.' }
   }
   if (requiereInstalarComoApp()) {
-    return { ok: false, error: 'Primero instala YAVI en tu pantalla de inicio.' }
+    return { ok: false, error: `Primero instala ${NOMBRE_APP[APP]} en tu pantalla de inicio.` }
   }
 
   const permiso = await Notification.requestPermission()
@@ -114,10 +124,21 @@ export async function activarNotificaciones(userId: string): Promise<{ ok: boole
         p256dh: json.keys?.p256dh ?? '',
         auth: json.keys?.auth ?? '',
         user_agent: navigator.userAgent,
+        app: APP,   // cada app guarda la suya: los avisos se envían solo a la app que corresponde
       },
       { onConflict: 'endpoint' },
     )
     if (error) return { ok: false, error: error.message }
+
+    // Reactivación: las suscripciones viejas (sin app) de este mismo dispositivo ya no sirven; se eliminan. Si falla, no importa:
+    // el envío ya las ignora.
+    try {
+      const todas = await suscripcionesDe(userId)
+      const viejas = idsViejosDelMismoDispositivo(todas ?? [], userId, suscripcion.endpoint, navigator.userAgent)
+      if (viejas.length > 0) await supabase.from('push_subscriptions').delete().in('id', viejas).eq('user_id', userId).is('app', null)
+    } catch {
+      // limpieza opcional
+    }
 
     return { ok: true }
   } catch {
@@ -137,7 +158,8 @@ export async function desactivarNotificaciones(userId: string): Promise<void> {
 // notificaciones o dijo explícitamente "ahora no", no la volvemos a
 // interrumpir con la pantalla de activación (puede reabrirla desde el menú).
 function claveDecidido(userId: string): string {
-  return `limpi_notif_decidido_${userId}`
+  // Por app: quien ya decidió antes de separar las apps vuelve a ver la pantalla una vez (su suscripción vieja ya no recibe avisos).
+  return `limpi_notif_decidido_${APP}_${userId}`
 }
 
 export function notifYaDecidido(userId: string): boolean {

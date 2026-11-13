@@ -13,3 +13,8 @@ Reglas mientras tanto:
 - Datos reales de cobro (`DATOS_PAGO`: Yape, Plin, banco).
 - KYC con Didit, disponibilidad configurable, penalidades por cancelación.
 - Pruebas reales contra Postgres, revisión Codex y respaldo antes de producción.
+
+## Confirmación de correo (código listo, falta activarla en Supabase)
+Ver `docs/confirmacion-de-correo.md`: flujo, orden de configuración en Supabase (SMTP propio, Redirect URLs por app, plantillas, *Confirm email*) y qué probar en la vista previa.
+
+Estado (2026-11-13): la confirmación ya está activa en LIMPIA con SMTP propio (Resend, `mail.frdinnovacion.com`) y plantillas en español; apps de clientes y profesional en vista previa. Tras la revisión de Codex se añadieron límites de nombre/dirección, «Completa tus datos» (cuenta confirmada sin perfil) y la reactivación única de avisos push para quien tenía suscripciones anteriores a la 0017. Falta: probar en vista previa, publicar `send-push` y las URL en `app_config`, y repetir SMTP/Redirect URLs/plantillas en el Supabase de producción.

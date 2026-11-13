@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { destinoPorRol } from '../lib/rutas'
+import { APP, INICIO_APP, NOMBRE_APP } from '../lib/app'
 import {
   activarNotificaciones,
   esIOS,
@@ -17,9 +17,9 @@ interface EventoInstalacion extends Event {
 }
 
 export function ActivarNotificaciones() {
-  const { session, perfil } = useAuth()
+  const { session } = useAuth()
   const navigate = useNavigate()
-  const destino = destinoPorRol(perfil)
+  const destino = INICIO_APP[APP]
 
   const [revisando, setRevisando] = useState(true)
   const [instalada, setInstalada] = useState(esStandalone())
@@ -101,7 +101,7 @@ export function ActivarNotificaciones() {
         </div>
         <h1 className="mb-2 text-2xl font-bold">Activa las notificaciones</h1>
         <p className="text-neutral-500">
-          {perfil?.rol === 'trabajador'
+          {APP === 'profesional'
             ? 'Así te enteras al toque cuando llega un pedido, aunque tengas la app cerrada. Sin esto no podrás activar "Disponible ahora".'
             : 'Así sabes al toque cuando una trabajadora se postula, acepta tu pedido o cuando empieza y termina tu servicio.'}
         </p>
@@ -110,7 +110,7 @@ export function ActivarNotificaciones() {
       {necesitaInstalarIOS ? (
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="mb-2 font-semibold">En iPhone, primero instala YAVI en tu pantalla de inicio:</p>
+            <p className="mb-2 font-semibold">En iPhone, primero instala {NOMBRE_APP[APP]} en tu pantalla de inicio:</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
                 Toca el ícono de <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba) en Safari.
@@ -118,7 +118,7 @@ export function ActivarNotificaciones() {
               <li>
                 Elige <strong>"Agregar a inicio"</strong>.
               </li>
-              <li>Abre YAVI desde el ícono que apareció en tu pantalla de inicio (no desde Safari).</li>
+              <li>Abre {NOMBRE_APP[APP]} desde el ícono que apareció en tu pantalla de inicio (no desde Safari).</li>
               <li>Vuelve a esta pantalla y activa las notificaciones.</li>
             </ol>
           </div>
@@ -138,7 +138,7 @@ export function ActivarNotificaciones() {
               onClick={onInstalar}
               className="rounded-xl border border-brand-700 px-4 py-3 font-semibold text-brand-700"
             >
-              Instalar YAVI en mi celular
+              Instalar {NOMBRE_APP[APP]} en mi celular
             </button>
           )}
 

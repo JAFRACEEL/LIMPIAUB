@@ -1,16 +1,13 @@
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import type { Rol } from '../types'
+import { APP } from '../lib/app'
 
-export function RutaProtegida({
-  children,
-  rolRequerido,
-}: {
-  children: ReactNode
-  rolRequerido?: Rol
-}) {
-  const { cargando, session, perfil } = useAuth()
+/** Qué hace falta para entrar: 'cliente' = cualquier cuenta con perfil; 'profesional' = tener su perfil de profesional; 'admin' = estar en `admins`. */
+export type Capacidad = 'cliente' | 'profesional' | 'admin'
+
+export function RutaProtegida({ children, requiere }: { children: ReactNode; requiere?: Capacidad }) {
+  const { cargando, session, perfil, esProfesional, esAdmin } = useAuth()
   const ubicacion = useLocation()
 
   if (cargando) {
@@ -22,12 +19,11 @@ export function RutaProtegida({
     return <Navigate to={`/login?volver=${encodeURIComponent(ubicacion.pathname + ubicacion.search)}`} replace />
   }
 
-  if (rolRequerido) {
+  if (requiere) {
+    // Sin perfil de profesional (con o sin perfil base): en la app Profesional se completa; en las demás se vuelve al inicio.
+    if (requiere === 'profesional' && !esProfesional) return <Navigate to={APP === 'profesional' ? '/registro' : '/'} replace />
     if (!perfil) return <Navigate to="/" replace />
-    if (perfil.rol !== rolRequerido) {
-      const destino = perfil.rol === 'trabajador' ? '/panel' : perfil.rol === 'admin' ? '/admin' : '/'
-      return <Navigate to={destino} replace />
-    }
+    if (requiere === 'admin' && !esAdmin) return <Navigate to="/" replace />
   }
 
   return <>{children}</>

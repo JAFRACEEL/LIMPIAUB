@@ -6,6 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:profesional": "tsc -b && vite build --mode profesional",
+    "build:admin": "tsc -b && vite build --mode admin",
+    "dev:profesional": "vite --mode profesional",
+    "dev:admin": "vite --mode admin",
     "preview": "vite preview",
     "test": "vitest run"
   },

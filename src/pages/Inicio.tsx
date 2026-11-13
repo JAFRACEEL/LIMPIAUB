@@ -207,7 +207,7 @@ export function Inicio() {
           </Link>
         </p>
       )}
-      {session && perfil?.rol === 'cliente' && (
+      {session && perfil && (
         <p className="mt-8 text-center text-sm">
           <Link to="/buscar" className="font-semibold text-brand-700">
             Ver profesionales

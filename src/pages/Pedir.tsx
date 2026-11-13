@@ -159,10 +159,6 @@ export function Pedir() {
       navigate('/login?volver=/pedir')
       return
     }
-    if (perfil.rol !== 'cliente') {
-      setError('Esta cuenta es de profesional. Entra con una cuenta de cliente para pedir un servicio.')
-      return
-    }
     const problema = validarDirecto(b, directo) ?? validarNecesidad(b, fotos.length) ?? validarLugarYHorario(b, new Date()) ?? problemaDeZona()
     if (problema) {
       setError(problema)
@@ -279,7 +275,7 @@ export function Pedir() {
         />
       )}
       {b.servicioId && b.paso === 3 && (
-        <PasoResumen b={b} directo={directo} haySesion={!!session} esCliente={perfil?.rol === 'cliente'} error={error} />
+        <PasoResumen b={b} directo={directo} haySesion={!!session} esCliente={!!perfil} error={error} />
       )}
 
       {error && b.paso !== 3 && b.servicioId && <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
@@ -295,7 +291,7 @@ export function Pedir() {
             >
               {etiquetaPrincipal}
             </button>
-            {b.paso === 3 && session && perfil?.rol === 'cliente' && (
+            {b.paso === 3 && session && perfil && (
               <p className="mt-2 text-center text-xs text-neutral-500">Te avisaremos cuando alguien responda. Aún no se cobra nada.</p>
             )}
           </div>

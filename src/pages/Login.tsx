@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { traducirError } from '../lib/errores'
+import { esErrorCorreoNoConfirmado, reenviarConfirmacion } from '../lib/altaCuenta'
 import { volverSeguro } from '../lib/rutas'
 import { Logo } from '../components/Logo'
 import { Aviso } from '../components/ui'
@@ -14,18 +15,35 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [enviando, setEnviando] = useState(false)
+  const [sinConfirmar, setSinConfirmar] = useState(false)
+  const [reenvio, setReenvio] = useState<{ tipo: 'exito' | 'error'; texto: string } | null>(null)
+  const [reenviando, setReenviando] = useState(false)
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setSinConfirmar(false)
+    setReenvio(null)
     setEnviando(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
     setEnviando(false)
     if (error) {
+      if (esErrorCorreoNoConfirmado(error)) {
+        setSinConfirmar(true)
+        return
+      }
       setError(traducirError(error))
       return
     }
     navigate(volver ?? '/')
+  }
+
+  async function reenviar() {
+    setReenviando(true)
+    setReenvio(null)
+    const { error } = await reenviarConfirmacion(supabase.auth, email, window.location.origin, volver)
+    setReenviando(false)
+    setReenvio(error ? { tipo: 'error', texto: traducirError(error) } : { tipo: 'exito', texto: `Te enviamos el correo de confirmación a ${email.trim()}. Revisa también el spam.` })
   }
 
   return (
@@ -70,6 +88,17 @@ export function Login() {
         {error && (
           <Aviso tipo="error">{error}</Aviso>
         )}
+
+        {sinConfirmar && (
+          <Aviso tipo="alerta">
+            Aún no confirmaste tu correo. Abre el enlace que te enviamos al registrarte (revisa también el spam) o pide que te lo
+            enviemos de nuevo.
+            <button type="button" onClick={reenviar} disabled={reenviando} className="mt-2 block font-semibold underline disabled:opacity-60">
+              {reenviando ? 'Enviando…' : 'Reenviar correo de confirmación'}
+            </button>
+          </Aviso>
+        )}
+        {reenvio && <Aviso tipo={reenvio.tipo}>{reenvio.texto}</Aviso>}
 
         <button
           type="submit"

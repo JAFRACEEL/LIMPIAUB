@@ -60,10 +60,10 @@ const origen = `https://127.0.0.1:${servidor.address().port}`
 
 // ---------- Datos de prueba ----------
 const vapid = webpush.generateVAPIDKeys()
-function suscripcionValida(ruta, id) {
+function suscripcionValida(ruta, id, app = 'profesional') {
   const ecdh = crypto.createECDH('prime256v1')
   ecdh.generateKeys()
-  return { id, endpoint: `${origen}/${ruta}/token-secreto-${id}`, p256dh: ecdh.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url'), user_id: USUARIO }
+  return { id, endpoint: `${origen}/${ruta}/token-secreto-${id}`, p256dh: ecdh.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url'), user_id: USUARIO, app }
 }
 const USUARIO = '11111111-1111-1111-1111-111111111111'
 const SECRETO = 'secreto-de-prueba-1234567890'
@@ -76,7 +76,7 @@ async function cargar(entorno = {}) {
   const db = { subs: [], lecturas: 0, borrados: [], errorLectura: null }
   globalThis.__fakeSupabase = () => ({
     from: () => ({
-      select: () => ({ in: async (_col, ids) => { db.lecturas += 1; return db.errorLectura ? { data: null, error: { message: db.errorLectura } } : { data: db.subs.filter((s) => ids.includes(s.user_id)), error: null } } }),
+      select: () => ({ eq: (_c, app) => ({ in: async (_col, ids) => { db.lecturas += 1; db.ultimaApp = app; return db.errorLectura ? { data: null, error: { message: db.errorLectura } } : { data: db.subs.filter((s) => s.app === app && ids.includes(s.user_id)), error: null } } }) }),
       delete: () => ({ in: async (_col, ids) => { db.borrados.push(...ids); db.subs = db.subs.filter((s) => !ids.includes(s.id)); return { error: null } } }),
     }),
   })
@@ -92,7 +92,7 @@ async function cargar(entorno = {}) {
     manejador(new Request('http://funcion.local/', { method: metodo, headers: secreto === null ? {} : { 'x-push-secret': secreto, 'content-type': 'application/json' }, body: metodo === 'GET' ? undefined : crudo ? cuerpo : JSON.stringify(cuerpo) }))
   return { db, llamar }
 }
-const aviso = (extra = {}) => ({ user_ids: [USUARIO], titulo: 'Nuevo pedido directo', cuerpo: 'Tienes 15 min para aceptar', url: '/panel', ...extra })
+const aviso = (extra = {}) => ({ user_ids: [USUARIO], titulo: 'Nuevo pedido directo', cuerpo: 'Tienes 15 min para aceptar', url: '/panel', app: 'profesional', ...extra })
 const json = async (r) => { try { return await r.clone().json() } catch { return null } }
 const errores = []
 const consolaOriginal = console.error
@@ -141,6 +141,39 @@ console.log('\n— Entradas inválidas')
   ok(sinTexto.status === 200 && (await json(sinTexto)).enviados === 0, 'título o cuerpo vacíos → 200 sin enviar')
   f.db.errorLectura = 'fallo de la base'
   ok((await f.llamar(aviso())).status === 500, 'si la base falla al leer las suscripciones → 500')
+}
+
+// ======================= APP DESTINO (0017) =======================
+console.log('\n— Cada aviso llega solo a la suscripción de su app')
+{
+  const f = await cargar()
+  const ruta = (r) => new URL(r.ruta, 'https://x').pathname.split('/')[1]
+  // La misma persona tiene dos suscripciones: una en la app Cliente y otra en la Profesional (+ una anterior a la 0017, sin app, y una de admin)
+  f.db.subs = [suscripcionValida('s-cliente', 'c1', 'cliente'), suscripcionValida('s-profesional', 'p1', 'profesional'), suscripcionValida('s-vieja', 'v1', null), suscripcionValida('s-admin', 'a1', 'admin')]
+  peticiones.length = 0
+  let c = await json(await f.llamar(aviso({ titulo: 'Nuevo pedido directo', app: 'profesional', url: 'https://pro.yavi.test/panel' })))
+  ok(c.enviados === 1 && peticiones.length === 1 && ruta(peticiones[0]) === 's-profesional', 'un pedido entrante (app profesional) llega SOLO a la suscripción de la app Profesional')
+  peticiones.length = 0
+  c = await json(await f.llamar(aviso({ titulo: 'Tienes una propuesta', app: 'cliente', url: 'https://yavi.test/reservas' })))
+  ok(c.enviados === 1 && peticiones.length === 1 && ruta(peticiones[0]) === 's-cliente', 'una propuesta (app cliente) llega SOLO a la suscripción de la app Cliente')
+  peticiones.length = 0
+  c = await json(await f.llamar(aviso({ titulo: 'Nueva trabajadora pendiente', app: 'admin', url: '/admin' })))
+  ok(c.enviados === 1 && ruta(peticiones[0]) === 's-admin', 'un aviso de verificación (app admin) llega solo a la suscripción de la app Admin')
+  ok(!peticiones.some((r) => ruta(r) === 's-vieja'), 'la suscripción anterior a la 0017 (sin app) no recibió ninguno de los tres')
+  for (const [nombre, valor] of [['sin app', undefined], ['app nula', null], ['app desconocida', 'todas'], ['app vacía', ''], ['app que no es texto', 7], ['app con otra capitalización', 'Cliente']]) {
+    peticiones.length = 0
+    const cuerpo = aviso(); if (valor === undefined) delete cuerpo.app; else cuerpo.app = valor
+    const r = await f.llamar(cuerpo); const cc = await json(r)
+    ok(r.status === 200 && cc.enviados === 0 && peticiones.length === 0, `${nombre} → no se envía nada (nunca "a todas las apps")`)
+  }
+  const lecturasAntes = f.db.lecturas
+  await f.llamar(aviso({ app: 'cliente' }))
+  ok(f.db.ultimaApp === 'cliente' && f.db.lecturas === lecturasAntes + 1, 'la consulta a la base filtra por la app del aviso')
+  // Un usuario con sola una suscripción vieja (sin app) no recibe nada
+  f.db.subs = [suscripcionValida('s-vieja', 'v2', null)]
+  peticiones.length = 0
+  c = await json(await f.llamar(aviso({ app: 'profesional' })))
+  ok(c.enviados === 0 && peticiones.length === 0 && f.db.subs.length === 1, 'solo con suscripciones sin app: no recibe nada y NO se borran (siguen ahí hasta que reactive)')
 }
 
 // ======================= PROVEEDOR REAL (SIMULADO) =======================

@@ -1,8 +1,8 @@
 // Service worker mínimo: deja instalar YAVI como app y sirve el shell desde
 // caché cuando la conexión es mala (común en celulares de gama baja).
 // Bump manual de CACHE cuando cambie algo importante del shell.
-const CACHE = 'limpi-v2'
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/brand/icon-192.png']
+const CACHE = 'limpi-v4'
+const APP_SHELL = ['/', '/index.html', '/brand/icon-192.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(APP_SHELL)))
@@ -41,13 +41,28 @@ self.addEventListener('push', (event) => {
 // abre una.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const destino = event.notification.data?.url ?? '/'
+  // El aviso puede traer una ruta ("/panel") o el enlace completo al dominio de la app. Si es de este mismo dominio se
+  // navega dentro de la pestaña ya abierta con la ruta; si no, se abre tal cual.
+  let destino = event.notification.data?.url ?? '/'
+  let ruta = '/'
+  let mismoOrigen = true
+  try {
+    const u = new URL(destino, self.location.origin)
+    mismoOrigen = u.origin === self.location.origin
+    ruta = u.pathname + u.search + u.hash
+    destino = u.href
+  } catch {
+    // URL ilegible: se abre el inicio
+    destino = self.location.origin + '/'
+  }
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
-      for (const cliente of listaClientes) {
-        if ('focus' in cliente) {
-          cliente.postMessage({ tipo: 'limpi-navegar', url: destino })
-          return cliente.focus()
+      if (mismoOrigen) {
+        for (const cliente of listaClientes) {
+          if ('focus' in cliente) {
+            cliente.postMessage({ tipo: 'limpi-navegar', url: ruta })
+            return cliente.focus()
+          }
         }
       }
       return self.clients.openWindow(destino)

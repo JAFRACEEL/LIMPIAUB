@@ -2,23 +2,51 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Perfil } from '../types'
-import { leerPendienteLegado, limpiarPendienteLegado, type RegistroPendiente } from '../lib/registroPendiente'
+import { APP } from '../lib/app'
+import { datosClienteDesdeMetadata, filaPerfilCliente } from '../lib/altaCuenta'
 
 interface AuthState {
+  /** Todavía no se sabe qué tiene la cuenta (sesión, perfil y capacidades). */
   cargando: boolean
   session: Session | null
   perfil: Perfil | null
   recargarPerfil: () => Promise<void>
+  /** Existe su fila en `trabajadores` (puede estar aún sin verificar). */
+  esProfesional: boolean
+  /** Está en la tabla `admins`. Solo sirve para mostrar u ocultar pantallas: la barrera real es RLS. */
+  esAdmin: boolean
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [cargando, setCargando] = useState(true)
+  const [inicial, setInicial] = useState(true)
   const [session, setSession] = useState<Session | null>(null)
   const [perfil, setPerfil] = useState<Perfil | null>(null)
+  const [esProfesional, setEsProfesional] = useState(false)
+  const [esAdmin, setEsAdmin] = useState(false)
+  // Id de la persona cuyo perfil y capacidades ya se cargaron. Mientras no coincida con la sesión, la app sigue "cargando":
+  // así nadie ve "no hay perfil" ni es redirigido antes de saber qué tiene la cuenta. Un refresco de token no lo reinicia.
+  const [idCargado, setIdCargado] = useState<string | null>(null)
+
+  // Las capacidades salen de la base (no de perfiles.rol, que quedó congelado): "es profesional" = existe su fila
+  // en trabajadores; "es admin" = está en la tabla admins (se pregunta con es_admin(), la tabla no se puede leer).
+  async function cargarCapacidades(userId: string) {
+    const [{ data: fila }, { data: admin }] = await Promise.all([
+      supabase.from('trabajadores').select('id').eq('id', userId).maybeSingle(),
+      supabase.rpc('es_admin'),
+    ])
+    setEsProfesional(!!fila)
+    setEsAdmin(admin === true)
+  }
 
   async function cargarPerfil(user: User) {
+    await cargarPerfilBase(user)
+    await cargarCapacidades(user.id)
+    setIdCargado(user.id)
+  }
+
+  async function cargarPerfilBase(user: User) {
     const { data } = await supabase.from('perfiles').select('*').eq('id', user.id).maybeSingle()
 
     if (data) {
@@ -26,101 +54,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    // No hay fila en `perfiles` todavía: puede ser un registro que quedó
-    // pendiente de confirmar el correo. Los datos del formulario viajan en
-    // user_metadata (ver Registro.tsx), no en localStorage, así que están
-    // disponibles sin importar desde qué navegador/dispositivo se confirmó
-    // el correo y se volvió a iniciar sesión. Si no hay nada en metadata,
-    // puede ser un registro de antes de este cambio: buscamos el respaldo
-    // viejo en localStorage (solo funciona si es el mismo navegador donde se
-    // llenó el formulario).
-    let pendiente = user.user_metadata as Partial<RegistroPendiente>
-    let usandoRespaldoLegado = false
-    if (!pendiente?.rol && user.email) {
-      const legado = leerPendienteLegado(user.email)
-      if (legado) {
-        pendiente = legado
-        usandoRespaldoLegado = true
-      }
-    }
-    if (!pendiente?.rol) {
+    // Sin fila en `perfiles`. Solo la app de clientes la crea sola, en el primer ingreso con sesión (después de confirmar
+    // el correo), con el rol 'cliente' FIJO: el rol nunca se lee de user_metadata. De ahí solo salen los datos de contacto,
+    // validados. En la app Profesional la fila (y la de trabajadores) la crea el formulario "Completar perfil de profesional".
+    const datos = APP === 'cliente' ? datosClienteDesdeMetadata(user.user_metadata) : null
+    if (!datos) {
       setPerfil(null)
       return
     }
 
-    // Datos guardados por una versión anterior del formulario (antes de
-    // documento/zonas múltiples): les faltan campos que ahora son
-    // obligatorios y nunca se van a poder completar solos. No hay nada que
-    // reintentar en logins futuros; pedimos registrarse de nuevo (la cuenta
-    // de Auth ya existe, así que no vuelve a intentar crearla).
-    if (pendiente.rol === 'trabajador' && (!pendiente.numero_documento || !pendiente.zonas?.length)) {
-      setPerfil(null)
-      alert('No pudimos completar tu registro anterior. Por favor vuelve a registrarte como trabajadora.')
-      return
-    }
-
-    const { error: errorPerfil } = await supabase.from('perfiles').insert({
-      id: user.id,
-      rol: pendiente.rol,
-      nombre: pendiente.nombre,
-      telefono: pendiente.telefono,
-      zona: pendiente.zona,
-      direccion: pendiente.direccion ?? null,
-    })
-
-    let errorTrabajador: unknown = null
-    if (!errorPerfil && pendiente.rol === 'trabajador') {
-      const resultado = await supabase.from('trabajadores').insert({
-        id: user.id,
-        genero: pendiente.genero,
-        nacionalidad: pendiente.nacionalidad,
-        tipo_documento: pendiente.tipo_documento,
-        numero_documento: pendiente.numero_documento,
-        zonas: pendiente.zonas,
-        servicios: pendiente.servicios ?? [],
-        tarifa_hora: pendiente.tarifa_hora,
-        experiencia: pendiente.experiencia || null,
-        antecedentes: pendiente.antecedentes || null,
-        cuenta_autorizacion_migratoria: pendiente.cuenta_autorizacion_migratoria ?? null,
-        estado_migratorio: pendiente.estado_migratorio,
-        doc_migratorio_numero: pendiente.doc_migratorio_numero || null,
-        doc_migratorio_vencimiento: pendiente.doc_migratorio_vencimiento || null,
-        referencia1_nombre: pendiente.referencia1_nombre,
-        referencia1_celular: pendiente.referencia1_celular,
-        referencia2_nombre: pendiente.referencia2_nombre,
-        referencia2_celular: pendiente.referencia2_celular,
-      })
-      errorTrabajador = resultado.error
-    }
-
-    if (!errorPerfil && errorTrabajador) {
-      // Los datos eran válidos pero el insert falló por otra razón (p. ej. un
-      // error de red): deshacemos el perfil para que el próximo login vuelva
-      // a intentar el alta completa, en vez de quedar a medias para siempre.
-      await supabase.from('perfiles').delete().eq('id', user.id)
-      setPerfil(null)
-      return
-    }
-
-    if (!errorPerfil && !errorTrabajador && usandoRespaldoLegado) limpiarPendienteLegado()
-
-    const { data: creado } = await supabase
-      .from('perfiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Si dos cargas coinciden (inicio + evento de sesión), una choca con la otra por clave duplicada: no importa, se vuelve a leer.
+    await supabase.from('perfiles').insert(filaPerfilCliente(user.id, datos))
+    const { data: creado } = await supabase.from('perfiles').select('*').eq('id', user.id).maybeSingle()
     setPerfil(creado)
   }
 
   async function recargarPerfil() {
-    if (session?.user) await cargarPerfil(session.user)
+    const { data } = await supabase.auth.getSession()
+    if (data.session?.user) await cargarPerfil(data.session.user)
   }
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
       setSession(data.session)
       if (data.session?.user) await cargarPerfil(data.session.user)
-      setCargando(false)
+      setInicial(false)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_evento, nuevaSession) => {
@@ -129,6 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await cargarPerfil(nuevaSession.user)
       } else {
         setPerfil(null)
+        setIdCargado(null)
+        setEsProfesional(false)
+        setEsAdmin(false)
       }
     })
 
@@ -136,8 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const cargando = inicial || (!!session && idCargado !== session.user.id)
+
   return (
-    <AuthContext.Provider value={{ cargando, session, perfil, recargarPerfil }}>
+    <AuthContext.Provider value={{ cargando, session, perfil, recargarPerfil, esProfesional, esAdmin }}>
       {children}
     </AuthContext.Provider>
   )

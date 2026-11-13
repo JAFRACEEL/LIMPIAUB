@@ -31,10 +31,17 @@ if ((url.includes('ztlxmdeviurdhqyabhvb') && process.env.TEST_PILOTO_LIMPIA !== 
 import http from 'node:http'
 import { randomUUID } from 'node:crypto'
 
+// La cuenta de admin de este script es admin.demo@prueba.limpi.test (la antigua admin@prueba se elimina, 0016). Este script le
+// REINICIA la contraseña en cada ejecución; en LIMPIA solo corre si lo confirmas, para no pisar la clave que el dueño le puso.
+if (url.includes('ztlxmdeviurdhqyabhvb') && process.env.TEST_REINICIA_CLAVE_ADMIN_DEMO !== 'si') {
+  console.error('Rechazado: este script reinicia la contraseña de admin.demo@prueba.limpi.test. En LIMPIA exige TEST_REINICIA_CLAVE_ADMIN_DEMO=si.')
+  process.exit(2)
+}
+
 const admin = createClient(url, servicio, { auth: { persistSession: false } })
 // Contraseña aleatoria por ejecución (nunca fija en el repositorio): `verificar` la renueva para los usuarios de prueba.
 const PASS = randomUUID()
-const correos = { c1: 'cliente1@prueba.limpi.test', c2: 'cliente2@prueba.limpi.test', w1: 'pro1@prueba.limpi.test', w2: 'pro2@prueba.limpi.test', adm: 'admin@prueba.limpi.test' }
+const correos = { c1: 'cliente1@prueba.limpi.test', c2: 'cliente2@prueba.limpi.test', w1: 'pro1@prueba.limpi.test', w2: 'pro2@prueba.limpi.test', adm: 'admin.demo@prueba.limpi.test' }
 const manana = new Date(Date.now() + 86400_000).toISOString().slice(0, 10)
 
 let pasos = 0, fallos = 0
@@ -65,7 +72,7 @@ if (modo === 'sembrar') {
     { id: ids.c2, rol: 'cliente', nombre: 'Cliente Dos', telefono: '911111112', zona: 'Iquitos', direccion: 'Jr. Lima 2' },
     { id: ids.w1, rol: 'trabajador', nombre: 'Pro Uno', telefono: '922222221', zona: 'Iquitos', direccion: 'x' },
     { id: ids.w2, rol: 'trabajador', nombre: 'Pro Dos', telefono: '922222222', zona: 'Iquitos', direccion: 'x' },
-    { id: ids.adm, rol: 'admin', nombre: 'Admin', telefono: '933333333', zona: 'Iquitos', direccion: 'x' },
+    { id: ids.adm, rol: 'admin', nombre: 'Admin Demo', telefono: '933333333', zona: 'Iquitos', direccion: 'x' },
   ])
   await admin.from('trabajadores').upsert([
     { id: ids.w1, numero_documento: '10000001', zonas: ['Iquitos'], servicios: ['Limpieza básica del hogar', 'Electricidad'], tarifa_hora: 15, kit_propio: true, verificado: true },
@@ -83,6 +90,11 @@ if (modo === 'sembrar') {
 }
 
 // ---------------- verificar ----------------
+// Desde la 0016 el poder de admin es la fila en `admins` (si la tabla aún no existe, entorno anterior a la 0016, no pasa nada).
+{
+  const r = await admin.from('admins').upsert({ user_id: await usuario('adm') })
+  if (r.error && !/admins/.test(r.error.message)) throw r.error
+}
 const c1 = await sesion('c1'), c2 = await sesion('c2'), w1 = await sesion('w1'), w2 = await sesion('w2'), adm = await sesion('adm')
 const anonimo = createClient(url, anon, { auth: { persistSession: false } })
 
