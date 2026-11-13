@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -27,7 +27,26 @@ function htmlPorApp(app: TipoApp): Plugin {
   }
 }
 
-export default defineConfig(({ mode }) => {
+// Variables obligatorias al COMPILAR. Se leen en el build (quedan dentro del bundle): si falta una, la app saldría rota sin avisar
+// (p. ej. sin la clave pública de push, "Activar notificaciones" queda deshabilitado). Es mejor que el build falle y lo diga.
+const VARIABLES_OBLIGATORIAS: Record<string, string> = {
+  VITE_SUPABASE_URL: 'dirección del proyecto de Supabase',
+  VITE_SUPABASE_ANON_KEY: 'clave pública (anon) de Supabase',
+  VITE_VAPID_PUBLIC_KEY: 'clave pública de las notificaciones push',
+}
+
+function exigirVariables(env: Record<string, string>, mode: string) {
+  const faltan = Object.keys(VARIABLES_OBLIGATORIAS).filter((k) => !env[k]?.trim())
+  if (faltan.length === 0) return
+  const detalle = faltan.map((k) => `  - ${k}: ${VARIABLES_OBLIGATORIAS[k]}`).join('\n')
+  throw new Error(
+    `\n\nFALTAN VARIABLES VITE_ PARA COMPILAR (modo "${mode}"):\n${detalle}\n\n` +
+      'Defínelas en el archivo .env (local) o como variables del proyecto en Vercel (Production y Preview) y vuelve a compilar.\n',
+  )
+}
+
+export default defineConfig(({ mode, command }) => {
+  if (command === 'build') exigirVariables(loadEnv(mode, '.', 'VITE_'), mode)
   const app: TipoApp = mode === 'profesional' || mode === 'admin' ? mode : 'cliente'
   return {
     plugins: [react(), tailwindcss(), htmlPorApp(app)],

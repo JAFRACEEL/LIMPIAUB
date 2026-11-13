@@ -1,0 +1,7 @@
+{
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "",
+  "outputDirectory": ".",
+  "redirects": [{ "source": "/(.*)", "destination": "https://yavi-pruebas.vercel.app/$1", "permanent": false }]
+}
