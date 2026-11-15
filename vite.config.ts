@@ -8,8 +8,8 @@ type TipoApp = 'cliente' | 'profesional' | 'admin'
 
 const MARCAS: Record<TipoApp, { nombre: string; corto: string; titulo: string; color: string }> = {
   cliente: { nombre: 'YAVI', corto: 'YAVI', titulo: 'YAVI — Servicios a tu alcance', color: '#ff7414' },
-  profesional: { nombre: 'YAVI Profesional', corto: 'YAVI Pro', titulo: 'YAVI Profesional — Trabaja con YAVI', color: '#ff7414' },
-  admin: { nombre: 'YAVI Admin', corto: 'YAVI Admin', titulo: 'YAVI Admin', color: '#1e293b' },
+  profesional: { nombre: 'YAVI Profesional', corto: 'YAVI Pro', titulo: 'YAVI Profesional — Trabaja con YAVI', color: '#0f766e' },
+  admin: { nombre: 'YAVI Admin', corto: 'YAVI Admin', titulo: 'YAVI Admin', color: '#5b21b6' },
 }
 
 function htmlPorApp(app: TipoApp): Plugin {
@@ -18,6 +18,7 @@ function htmlPorApp(app: TipoApp): Plugin {
     name: 'yavi-html-por-app',
     transformIndexHtml(html) {
       return html
+        .replace('%APP_ID%', app)
         .replace('%APP_MANIFEST%', `/manifest-${app}.webmanifest`)
         .replace('%APP_TITULO%', m.titulo)
         .replace('%APP_CORTO%', m.corto)

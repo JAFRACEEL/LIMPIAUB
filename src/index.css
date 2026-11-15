@@ -53,11 +53,11 @@
   --radius-3xl: 2rem;
 
   /* Volumen suave: sombra difusa tibia + reflejo interior arriba. */
-  --shadow-xs: 0 1px 2px rgb(120 53 15 / 0.08);
-  --shadow-sm: 0 6px 14px -6px rgb(120 53 15 / 0.2), inset 0 1.5px 0 rgb(255 255 255 / 0.9);
-  --shadow-md: 0 10px 22px -8px rgb(120 53 15 / 0.24), inset 0 1.5px 0 rgb(255 255 255 / 0.9);
-  --shadow-lg: 0 16px 32px -10px rgb(120 53 15 / 0.28), inset 0 2px 0 rgb(255 255 255 / 0.9);
-  --shadow-xl: 0 22px 44px -12px rgb(120 53 15 / 0.32), inset 0 2px 0 rgb(255 255 255 / 0.9);
+  --shadow-xs: 0 1px 2px rgb(var(--yavi-sombra) / 0.08);
+  --shadow-sm: 0 6px 14px -6px rgb(var(--yavi-sombra) / 0.2), inset 0 1.5px 0 rgb(255 255 255 / 0.9);
+  --shadow-md: 0 10px 22px -8px rgb(var(--yavi-sombra) / 0.24), inset 0 1.5px 0 rgb(255 255 255 / 0.9);
+  --shadow-lg: 0 16px 32px -10px rgb(var(--yavi-sombra) / 0.28), inset 0 2px 0 rgb(255 255 255 / 0.9);
+  --shadow-xl: 0 22px 44px -12px rgb(var(--yavi-sombra) / 0.32), inset 0 2px 0 rgb(255 255 255 / 0.9);
 
   --font-sans: ui-rounded, 'SF Pro Rounded', 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
@@ -66,15 +66,74 @@
   color-scheme: light;
   --yavi-lienzo: #fffaf5;
   --yavi-foco: rgb(233 89 10 / 0.6);
+  --yavi-sombra: 120 53 15;
   --yavi-borde: rgb(120 53 15 / 0.12);
   --yavi-clay-boton: linear-gradient(180deg, #ff8a2b 0%, #ec5f10 100%);
   --yavi-clay-boton-sombra: 0 10px 18px -8px rgb(233 89 10 / 0.6), inset 0 2px 0 rgb(255 255 255 / 0.32), inset 0 -3px 0 rgb(0 0 0 / 0.14);
+  --yavi-llamada: radial-gradient(120% 90% at 50% 0%, #ffa04a 0%, #ff7a1a 42%, #e8590c 100%);
   --yavi-clay-campo: inset 0 2px 5px rgb(120 53 15 / 0.09);
+}
+
+/*
+ * Color por app (index.html fija data-app al compilar): cliente = naranja, profesional = verde azulado,
+ * admin = violeta. Se redefinen los tokens brand-* y las variables que usan los degradados.
+ */
+:root[data-app='profesional'] {
+  --color-brand-50: #f0fdfa;
+  --color-brand-100: #ccfbf1;
+  --color-brand-200: #99f6e4;
+  --color-brand-300: #5eead4;
+  --color-brand-400: #2dd4bf;
+  --color-brand-500: #14b8a6;
+  --color-brand-600: #0d9488;
+  --color-brand-700: #0f766e;
+  --color-brand-800: #115e59;
+  --color-brand-900: #134e4a;
+  --color-brand-950: #042f2e;
+  --color-brand-ink: #022c22;
+  --yavi-lienzo: #f6fdfb;
+  --yavi-foco: rgb(13 148 136 / 0.6);
+  --yavi-clay-boton: linear-gradient(180deg, #5eead4 0%, #14b8a6 100%);
+  --yavi-clay-boton-sombra: 0 10px 18px -8px rgb(13 148 136 / 0.6), inset 0 2px 0 rgb(255 255 255 / 0.32), inset 0 -3px 0 rgb(0 0 0 / 0.14);
+  --yavi-llamada: radial-gradient(120% 90% at 50% 0%, #5eead4 0%, #2dd4bf 42%, #14b8a6 100%);
+  --yavi-sombra: 19 78 74;
+  --yavi-borde: rgb(19 78 74 / 0.12);
+  --yavi-clay-campo: inset 0 2px 5px rgb(19 78 74 / 0.09);
+  --yavi-fondo-cielo: #dcfaf4;
+  --yavi-tarjeta-fin: #effcf9;
+  --yavi-burbuja: linear-gradient(145deg, #2dd4bf 0%, #0f766e 100%);
+  --yavi-burbuja-sombra: 0 8px 14px -6px rgb(15 118 110 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.4), inset 0 -3px 0 rgb(0 0 0 / 0.12);
+}
+:root[data-app='admin'] {
+  --color-brand-50: #f5f3ff;
+  --color-brand-100: #ede9fe;
+  --color-brand-200: #ddd6fe;
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+  --color-brand-800: #5b21b6;
+  --color-brand-900: #4c1d95;
+  --color-brand-950: #2e1065;
+  --color-brand-ink: #2e1065;
+  --yavi-lienzo: #faf8ff;
+  --yavi-foco: rgb(124 58 237 / 0.6);
+  --yavi-clay-boton: linear-gradient(180deg, #d8ccff 0%, #a78bfa 100%);
+  --yavi-clay-boton-sombra: 0 10px 18px -8px rgb(124 58 237 / 0.6), inset 0 2px 0 rgb(255 255 255 / 0.32), inset 0 -3px 0 rgb(0 0 0 / 0.14);
+  --yavi-llamada: radial-gradient(120% 90% at 50% 0%, #d8ccff 0%, #b69cfb 42%, #8b5cf6 100%);
+  --yavi-sombra: 76 29 149;
+  --yavi-borde: rgb(76 29 149 / 0.12);
+  --yavi-clay-campo: inset 0 2px 5px rgb(76 29 149 / 0.09);
+  --yavi-fondo-cielo: #ede9fe;
+  --yavi-tarjeta-fin: #f6f3ff;
+  --yavi-burbuja: linear-gradient(145deg, #8b5cf6 0%, #5b21b6 100%);
+  --yavi-burbuja-sombra: 0 8px 14px -6px rgb(91 33 182 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.4), inset 0 -3px 0 rgb(0 0 0 / 0.12);
 }
 
 body {
   @apply text-neutral-900 antialiased;
-  background: radial-gradient(120% 50% at 50% -8%, #ffeedd 0%, var(--yavi-lienzo) 58%) fixed;
+  background: radial-gradient(120% 50% at 50% -8%, var(--yavi-fondo-cielo, #ffeedd) 0%, var(--yavi-lienzo) 58%) fixed;
   min-height: 100dvh;
 }
 
@@ -149,7 +208,7 @@ button:disabled {
   .yavi-categoria {
     @apply relative flex min-h-28 flex-col items-start justify-between gap-3 rounded-3xl border bg-white p-4 text-left shadow-lg;
     border-color: var(--yavi-borde);
-    background-image: linear-gradient(180deg, #ffffff 0%, #fff6ee 100%);
+    background-image: linear-gradient(180deg, #ffffff 0%, var(--yavi-tarjeta-fin, #fff6ee) 100%);
   }
   .yavi-categoria[aria-disabled='true'] {
     @apply border-dashed bg-neutral-100 text-neutral-500 shadow-none;
@@ -159,8 +218,8 @@ button:disabled {
   /* Burbuja del ícono de una categoría. */
   .yavi-burbuja {
     @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white;
-    background-image: linear-gradient(145deg, #ff8a35 0%, #e9590a 100%);
-    box-shadow: 0 8px 14px -6px rgb(194 65 12 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.4), inset 0 -3px 0 rgb(0 0 0 / 0.12);
+    background-image: var(--yavi-burbuja, linear-gradient(145deg, #ff8a35 0%, #e9590a 100%));
+    box-shadow: var(--yavi-burbuja-sombra, 0 8px 14px -6px rgb(194 65 12 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.4), inset 0 -3px 0 rgb(0 0 0 / 0.12));
   }
   .yavi-burbuja[data-tono='azul'] {
     background-image: linear-gradient(145deg, #2f5fc0 0%, #0d2f72 100%);

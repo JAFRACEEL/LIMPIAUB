@@ -101,7 +101,7 @@ export function PedidoEntranteOverlay({
     <div
       className="fixed inset-0 z-50 flex flex-col items-center overflow-y-auto text-brand-ink"
       style={{
-        background: 'radial-gradient(120% 90% at 50% 0%, #ffa04a 0%, #ff7a1a 42%, #e8590c 100%)',
+        background: 'var(--yavi-llamada)',
       }}
     >
       {confirmacion ? (

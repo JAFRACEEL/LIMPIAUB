@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es-PE">
+<html lang="es-PE" data-app="%APP_ID%">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/brand/favicon-64.png" />
@@ -60,6 +60,17 @@
       @keyframes ys-ondas { 0% { transform: scale(1.9); opacity: 0.9; } 100% { transform: scale(3.6); opacity: 0; } }
       @keyframes ys-vuela { 0% { transform: rotate(var(--a)) translateX(100px) scale(1); opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(0.2); opacity: 0; } }
       @keyframes ys-vuela-estrella { 0% { transform: rotate(var(--a)) translateX(106px) scale(0.2); opacity: 1; } 55% { opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(1.1); opacity: 0; } }
+      /* Color de la pantalla de inicio por app (el ícono oficial no se recolorea). */
+      html[data-app='profesional'] { background: #f6fdfb; }
+      html[data-app='profesional'] #yavi-splash { background: radial-gradient(70% 50% at 50% 46%, #d5f7f0 0%, #f6fdfb 62%); }
+      html[data-app='profesional'] .ys-res { background: radial-gradient(circle, rgba(45, 212, 191, 0.85) 0%, rgba(20, 184, 166, 0.35) 40%, rgba(20, 184, 166, 0) 70%); }
+      html[data-app='profesional'] .ys-onda { border-color: rgba(20, 184, 166, 0.6); }
+      html[data-app='profesional'] .ys-chispa, html[data-app='profesional'] .ys-estrella { background: #14b8a6 !important; }
+      html[data-app='admin'] { background: #faf8ff; }
+      html[data-app='admin'] #yavi-splash { background: radial-gradient(70% 50% at 50% 46%, #e9e3ff 0%, #faf8ff 62%); }
+      html[data-app='admin'] .ys-res { background: radial-gradient(circle, rgba(167, 139, 250, 0.85) 0%, rgba(139, 92, 246, 0.35) 40%, rgba(139, 92, 246, 0) 70%); }
+      html[data-app='admin'] .ys-onda { border-color: rgba(139, 92, 246, 0.6); }
+      html[data-app='admin'] .ys-chispa, html[data-app='admin'] .ys-estrella { background: #8b5cf6 !important; }
       @media (prefers-reduced-motion: reduce) {
         .ys-icono { animation: none; opacity: 1; }
         .ys-brillo, .ys-res, .ys-onda, .ys-chispa, .ys-estrella { display: none; }

@@ -15,6 +15,13 @@ La app se presenta como **YAVI — «Servicios a tu alcance»**. Conecta cliente
 - `rounded-lg…3xl` y `shadow-xs…xl` redefinidos: radios generosos, sombra difusa tibia y reflejo interior superior (claymorphism moderado).
 - Como la app ya usaba esas clases, el estilo llega a todas las pantallas sin tocarlas una por una.
 
+## Color por app
+Cada build marca `<html data-app="cliente|profesional|admin">` (`vite.config.ts` + `index.html`) y `src/index.css` redefine, bajo `:root[data-app=…]`, los tokens `brand-*`, la tinta del botón, el lienzo, los degradados (botón, burbuja, pantalla de llamada, fondo, tarjeta de categoría), el tinte de sombras y bordes (`--yavi-sombra`) y el foco.
+- **Cliente:** naranja YAVI (sin cambios).
+- **Profesional:** verde azulado (teal, `brand-700` #0f766e). Barra del navegador `#0f766e`.
+- **Admin:** violeta (`brand-700` #6d28d9). Barra del navegador `#5b21b6`.
+También cambian la pantalla de inicio (fondo, resplandor, ondas y chispas) y `theme_color`/`background_color` de los manifests. **No cambian** los íconos ni el logo oficial (naranja; no se recolorean) ni los colores de estado (verde éxito, ámbar alerta, rojo error). Tras actualizar, en el iPad hay que quitar el acceso directo y volver a agregarlo para ver el color de la barra y el ícono.
+
 ## Piezas compartidas
 - CSS: `.yavi-tarjeta`, `.yavi-categoria` + `.yavi-burbuja` (la pieza más expresiva), `.yavi-boton-secundario`, `.yavi-aviso[data-tipo]`, `.yavi-esqueleto`. Todo elemento con `bg-brand-700` toma el naranja cálido de arcilla (degradado #ff8a2b → #ec5f10) con texto `brand-ink`.
 - React: `src/components/ui.tsx` (`Boton`, `Aviso`, `EstadoVacio`, `Cargando`), `Logo.tsx`, `IconoServicio.tsx` (íconos de línea con el mismo trazo; `tonoServicio` alterna naranja/azul).
