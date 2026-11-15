@@ -18,6 +18,7 @@ function htmlPorApp(app: TipoApp): Plugin {
     name: 'yavi-html-por-app',
     transformIndexHtml(html) {
       return html
+        .replaceAll('%APP_BRAND%', app === 'cliente' ? '/brand' : `/brand/${app}`)
         .replace('%APP_ID%', app)
         .replace('%APP_MANIFEST%', `/manifest-${app}.webmanifest`)
         .replace('%APP_TITULO%', m.titulo)
