@@ -16,7 +16,7 @@ La app se presenta como **YAVI — «Servicios a tu alcance»**. Conecta cliente
 - Como la app ya usaba esas clases, el estilo llega a todas las pantallas sin tocarlas una por una.
 
 ## Color por app
-`App.tsx` marca `<html data-app="cliente|profesional|admin">` **solo con sesión iniciada** (pantallas internas); antes de entrar —pantalla de inicio, login, registro, recuperar contraseña— todas las apps conservan el naranja original, y `Logo.tsx` aplica el mismo criterio. `src/index.css` entonces `src/index.css` redefine, bajo `:root[data-app=…]`, los tokens `brand-*`, la tinta del botón, el lienzo, los degradados (botón, burbuja, pantalla de llamada, fondo, tarjeta de categoría), el tinte de sombras y bordes (`--yavi-sombra`) y el foco.
+`App.tsx` marca `<html data-app="cliente|profesional|admin">` **solo con sesión iniciada** (pantallas internas); antes de entrar —pantalla de inicio, login, registro, recuperar contraseña— todas las apps conservan el naranja original, y `Logo.tsx` aplica el mismo criterio. `src/index.css` redefine, bajo `:root[data-app=…]`, los tokens `brand-*`, la tinta del botón, el lienzo, los degradados (botón, burbuja, pantalla de llamada, fondo, tarjeta de categoría), el tinte de sombras y bordes (`--yavi-sombra`) y el foco.
 - **Cliente:** naranja YAVI (sin cambios).
 - **Profesional:** verde azulado (teal, `brand-700` #0f766e). Barra del navegador `#0f766e`.
 - **Admin:** violeta (`brand-700` #6d28d9). Barra del navegador `#5b21b6`.
