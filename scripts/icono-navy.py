@@ -31,7 +31,7 @@ def variante_admin(img):
     azul = (h > 190) & (h < 260) & (s > 0.3)
     h2 = np.where(azul, 160, h)
     s2 = np.where(azul, np.minimum(1, s * 0.95), s)
-    v2 = np.where(azul, np.minimum(1, mx * 1.4), mx)
+    v2 = np.where(azul, np.minimum(1, mx * 0.95), mx)
     h6 = (h2 % 360) / 60; i = np.floor(h6).astype(int) % 6; f = h6 - np.floor(h6)
     p, q, t = v2 * (1 - s2), v2 * (1 - s2 * f), v2 * (1 - s2 * (1 - f))
     out = np.zeros(a.shape)
