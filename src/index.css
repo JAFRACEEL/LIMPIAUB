@@ -79,30 +79,31 @@
  * admin = violeta. Se redefinen los tokens brand-* y las variables que usan los degradados.
  */
 :root[data-app='profesional'] {
-  --color-brand-50: #f0fdfa;
-  --color-brand-100: #ccfbf1;
-  --color-brand-200: #99f6e4;
-  --color-brand-300: #5eead4;
-  --color-brand-400: #2dd4bf;
-  --color-brand-500: #14b8a6;
-  --color-brand-600: #0d9488;
-  --color-brand-700: #0f766e;
-  --color-brand-800: #115e59;
-  --color-brand-900: #134e4a;
-  --color-brand-950: #042f2e;
-  --color-brand-ink: #022c22;
-  --yavi-lienzo: #f6fdfb;
-  --yavi-foco: rgb(13 148 136 / 0.6);
-  --yavi-clay-boton: linear-gradient(180deg, #5eead4 0%, #14b8a6 100%);
-  --yavi-clay-boton-sombra: 0 10px 18px -8px rgb(13 148 136 / 0.6), inset 0 2px 0 rgb(255 255 255 / 0.32), inset 0 -3px 0 rgb(0 0 0 / 0.14);
-  --yavi-llamada: radial-gradient(120% 90% at 50% 0%, #5eead4 0%, #2dd4bf 42%, #14b8a6 100%);
-  --yavi-sombra: 19 78 74;
-  --yavi-borde: rgb(19 78 74 / 0.12);
-  --yavi-clay-campo: inset 0 2px 5px rgb(19 78 74 / 0.09);
-  --yavi-fondo-cielo: #dcfaf4;
-  --yavi-tarjeta-fin: #effcf9;
-  --yavi-burbuja: linear-gradient(145deg, #2dd4bf 0%, #0f766e 100%);
-  --yavi-burbuja-sombra: 0 8px 14px -6px rgb(15 118 110 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.4), inset 0 -3px 0 rgb(0 0 0 / 0.12);
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe7ff;
+  --color-brand-200: #b9cffb;
+  --color-brand-300: #8badf0;
+  --color-brand-400: #5b84dc;
+  --color-brand-500: #2f5fc0;
+  --color-brand-600: #1c4aa6;
+  --color-brand-700: #123b8c;
+  --color-brand-800: #0d2f72;
+  --color-brand-900: #0a2358;
+  --color-brand-950: #061538;
+  --color-brand-ink: #061538;
+  --yavi-texto-boton: #ffffff;
+  --yavi-lienzo: #f5f8ff;
+  --yavi-foco: rgb(28 74 166 / 0.6);
+  --yavi-clay-boton: linear-gradient(180deg, #2f5fc0 0%, #0d2f72 100%);
+  --yavi-clay-boton-sombra: 0 10px 18px -8px rgb(13 47 114 / 0.6), inset 0 2px 0 rgb(255 255 255 / 0.25), inset 0 -3px 0 rgb(0 0 0 / 0.18);
+  --yavi-llamada: radial-gradient(120% 90% at 50% 0%, #b9cffb 0%, #8badf0 42%, #5b84dc 100%);
+  --yavi-sombra: 10 35 88;
+  --yavi-borde: rgb(10 35 88 / 0.12);
+  --yavi-clay-campo: inset 0 2px 5px rgb(10 35 88 / 0.09);
+  --yavi-fondo-cielo: #dbe7ff;
+  --yavi-tarjeta-fin: #eef4ff;
+  --yavi-burbuja: linear-gradient(145deg, #5b84dc 0%, #0d2f72 100%);
+  --yavi-burbuja-sombra: 0 8px 14px -6px rgb(13 47 114 / 0.55), inset 0 2px 0 rgb(255 255 255 / 0.4), inset 0 -3px 0 rgb(0 0 0 / 0.12);
 }
 :root[data-app='admin'] {
   --color-brand-50: #f5f3ff;
@@ -177,7 +178,7 @@ textarea:disabled {
  */
 .bg-brand-700 {
   background-image: var(--yavi-clay-boton);
-  color: var(--color-brand-ink);
+  color: var(--yavi-texto-boton, var(--color-brand-ink));
 }
 :is(button, a, label).bg-brand-700:not(:disabled, [aria-disabled='true']) {
   box-shadow: var(--yavi-clay-boton-sombra);

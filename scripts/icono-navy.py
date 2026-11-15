@@ -65,7 +65,7 @@ def guardar(img, app):
     for nombre, px in [('icon-512.png', 512), ('icon-192.png', 192), ('apple-touch-icon.png', 180), ('favicon-64.png', 64)]:
         img.resize((px, px), Image.LANCZOS).save(os.path.join(RAIZ, app, nombre))
 
-guardar(a_variante(base, 165), 'profesional')  # verde azulado (el naranja es del cliente)
+guardar(a_variante(base, 200), 'profesional')  # celeste sobre azul marino (el naranja es del cliente)
 Image.fromarray(np.asarray(base)).resize((1024, 1024), Image.LANCZOS).save(os.path.join(RAIZ, 'profesional', 'yavi-icono-naranja-original.png'))
 adm = a_variante(base, 255)
 pastilla(adm, 'ADMIN', (205, 188, 255), (139, 92, 246))

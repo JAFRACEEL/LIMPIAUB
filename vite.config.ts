@@ -8,7 +8,7 @@ type TipoApp = 'cliente' | 'profesional' | 'admin'
 
 const MARCAS: Record<TipoApp, { nombre: string; corto: string; titulo: string; color: string }> = {
   cliente: { nombre: 'YAVI', corto: 'YAVI', titulo: 'YAVI — Servicios a tu alcance', color: '#ff7414' },
-  profesional: { nombre: 'YAVI Profesional', corto: 'YAVI Pro', titulo: 'YAVI Profesional — Trabaja con YAVI', color: '#0f766e' },
+  profesional: { nombre: 'YAVI Profesional', corto: 'YAVI Pro', titulo: 'YAVI Profesional — Trabaja con YAVI', color: '#0d2f72' },
   admin: { nombre: 'YAVI Admin', corto: 'YAVI Admin', titulo: 'YAVI Admin', color: '#5b21b6' },
 }
 

@@ -6,7 +6,7 @@ import colorsys, os
 import numpy as np
 from PIL import Image
 
-BASE = {'profesional': 165, 'admin': 255}  # tono destino (grados) para el naranja
+BASE = {'profesional': 200, 'admin': 255}  # tono destino (grados) para el naranja
 ARCHIVOS = ['yavi-logo.jpg', 'yavi-icono.jpg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'favicon-64.png']
 RAIZ = os.path.join(os.path.dirname(__file__), '..', 'public', 'brand')
 
