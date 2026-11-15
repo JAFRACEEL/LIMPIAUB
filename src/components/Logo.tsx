@@ -3,9 +3,10 @@
  * sin recortar ni deformar; `mix-blend-multiply` solo hace que el blanco del archivo se funda con el fondo.
  */
 import { APP } from '../lib/app'
+import { useAuth } from '../context/AuthContext'
 
-// Cliente usa los originales (naranja); profesional y admin, sus variantes de color (scripts/recolorear-marca.py).
-const CARPETA = APP === 'cliente' ? '/brand' : `/brand/${APP}`
+// Antes de entrar (inicio, login, registro) todas las apps usan el logo naranja original. Con sesión, profesional y admin
+// usan su variante de color (scripts/recolorear-marca.py). Mismo criterio que data-app en App.tsx.
 
 type Props = {
   variante?: 'icono' | 'completo'
@@ -13,6 +14,8 @@ type Props = {
 }
 
 export function Logo({ variante = 'completo', className = '' }: Props) {
+  const { session } = useAuth()
+  const CARPETA = APP === 'cliente' || !session ? '/brand' : `/brand/${APP}`
   const completo = variante === 'completo'
   return (
     <img

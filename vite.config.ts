@@ -19,7 +19,6 @@ function htmlPorApp(app: TipoApp): Plugin {
     transformIndexHtml(html) {
       return html
         .replaceAll('%APP_BRAND%', app === 'cliente' ? '/brand' : `/brand/${app}`)
-        .replace('%APP_ID%', app)
         .replace('%APP_MANIFEST%', `/manifest-${app}.webmanifest`)
         .replace('%APP_TITULO%', m.titulo)
         .replace('%APP_CORTO%', m.corto)
