@@ -19,7 +19,7 @@ base = Image.new('RGB', (L, L), FONDO)
 base.paste(cont.resize((1500, int(1500 * cont.height / cont.width))), (0, 120))
 
 def variante_admin(img):
-    """Admin: fondo violeta intenso, trazo blanco y acentos dorados (el naranja pasa a dorado, el azul marino a violeta)."""
+    """Admin: fondo verde esmeralda intenso, trazo blanco y acentos naranjas (el naranja se conserva; el azul marino pasa a verde esmeralda)."""
     a = np.asarray(img.convert('RGB'), dtype=np.float64) / 255
     mx, mn = a.max(-1), a.min(-1); dd = mx - mn
     r, g, b = a[..., 0], a[..., 1], a[..., 2]
@@ -28,11 +28,10 @@ def variante_admin(img):
     h[rc] = ((g - b)[rc] / dd[rc]) % 6; h[gc] = (b - r)[gc] / dd[gc] + 2; h[bc] = (r - g)[bc] / dd[bc] + 4
     h *= 60; s = np.where(mx > 0, dd / np.where(mx > 0, mx, 1), 0)
     hn = np.where(h > 340, h - 360, h)
-    naranja = (hn < 65) & (s > 0.3)
     azul = (h > 190) & (h < 260) & (s > 0.3)
-    h2 = np.where(naranja, 38 + 0.35 * np.clip(hn, -20, 65), np.where(azul, 266, h))
+    h2 = np.where(azul, 160, h)
     s2 = np.where(azul, np.minimum(1, s * 0.95), s)
-    v2 = np.where(azul, np.minimum(1, mx * 2.1), mx)
+    v2 = np.where(azul, np.minimum(1, mx * 1.4), mx)
     h6 = (h2 % 360) / 60; i = np.floor(h6).astype(int) % 6; f = h6 - np.floor(h6)
     p, q, t = v2 * (1 - s2), v2 * (1 - s2 * f), v2 * (1 - s2 * (1 - f))
     out = np.zeros(a.shape)
@@ -73,6 +72,6 @@ guardar(base, 'profesional')  # naranja, blanco y azul marino (colores de la mar
 Image.fromarray(np.asarray(base)).resize((1024, 1024), Image.LANCZOS).save(os.path.join(RAIZ, 'profesional', 'yavi-icono-naranja-original.png'))
 adm = variante_admin(base)
 fondo_adm = adm.getpixel((10, 10))
-pastilla(adm, 'ADMIN', (255, 214, 102), (240, 160, 28), fondo=fondo_adm, tinta=(46, 16, 101))
+pastilla(adm, 'ADMIN', (244, 160, 80), (224, 104, 44), fondo=fondo_adm, tinta=(4, 52, 36))
 guardar(adm, 'admin')
 print('ok')
