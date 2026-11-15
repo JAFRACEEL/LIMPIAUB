@@ -32,12 +32,6 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cargando])
 
-  // Color por app solo en las pantallas internas (con sesión). Inicio, login y registro conservan el naranja original.
-  const conSesion = !!session
-  useEffect(() => {
-    document.documentElement.dataset.app = conSesion ? APP : 'cliente'
-  }, [conSesion])
-
   // Al tocar una notificación push con la app ya abierta en otra pestaña,
   // el service worker enfoca esa pestaña y nos manda a dónde navegar (una
   // pestaña ya enfocada no cambia de URL sola).

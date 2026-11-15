@@ -18,24 +18,6 @@ L = 1500
 base = Image.new('RGB', (L, L), FONDO)
 base.paste(cont.resize((1500, int(1500 * cont.height / cont.width))), (0, 120))
 
-def a_variante(img, desplaza):
-    a = np.asarray(img.convert('RGB'), dtype=np.float64) / 255
-    mx, mn = a.max(-1), a.min(-1); dd = mx - mn
-    r, g, b = a[..., 0], a[..., 1], a[..., 2]
-    h = np.zeros_like(mx); m = dd > 1e-9
-    rc = m & (mx == r); gc = m & (mx == g) & ~rc; bc = m & ~rc & ~gc
-    h[rc] = ((g - b)[rc] / dd[rc]) % 6; h[gc] = (b - r)[gc] / dd[gc] + 2; h[bc] = (r - g)[bc] / dd[bc] + 4
-    h *= 60; s = np.where(mx > 0, dd / np.where(mx > 0, mx, 1), 0)
-    hn = np.where(h > 340, h - 360, h)
-    mk = (hn < 65) & (s > 0.15)
-    h2 = np.where(mk, desplaza + 0.5 * np.clip(hn, -20, 65), h)
-    h6 = (h2 % 360) / 60; i = np.floor(h6).astype(int) % 6; f = h6 - np.floor(h6)
-    p, q, t = mx * (1 - s), mx * (1 - s * f), mx * (1 - s * (1 - f))
-    out = np.zeros(a.shape)
-    for k, (rr, gg, bb) in enumerate([(mx, t, p), (q, mx, p), (p, mx, t), (p, q, mx), (t, p, mx), (mx, p, q)]):
-        w = i == k; out[w] = np.stack([rr[w], gg[w], bb[w]], -1)
-    return Image.fromarray((out * 255).round().astype(np.uint8))
-
 def pastilla(img, texto, c1, c2):
     # Pinta de nuevo la zona de la píldora con el fondo y dibuja una nueva con el texto.
     dr = ImageDraw.Draw(img)
@@ -65,9 +47,9 @@ def guardar(img, app):
     for nombre, px in [('icon-512.png', 512), ('icon-192.png', 192), ('apple-touch-icon.png', 180), ('favicon-64.png', 64)]:
         img.resize((px, px), Image.LANCZOS).save(os.path.join(RAIZ, app, nombre))
 
-guardar(a_variante(base, 200), 'profesional')  # celeste sobre azul marino (el naranja es del cliente)
+guardar(base, 'profesional')  # naranja, blanco y azul marino (colores de la marca) (el naranja es del cliente)
 Image.fromarray(np.asarray(base)).resize((1024, 1024), Image.LANCZOS).save(os.path.join(RAIZ, 'profesional', 'yavi-icono-naranja-original.png'))
-adm = a_variante(base, 255)
-pastilla(adm, 'ADMIN', (205, 188, 255), (139, 92, 246))
+adm = base.copy()
+pastilla(adm, 'ADMIN', (244, 160, 80), (224, 104, 44))
 guardar(adm, 'admin')
 print('ok')
