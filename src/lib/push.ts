@@ -20,7 +20,9 @@ export function soportaPush(): boolean {
 }
 
 export function esIOS(): boolean {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent)
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent)) return true
+  // iPadOS 13+ se identifica como Mac de escritorio: se distingue por la pantalla táctil.
+  return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
 
 export function esStandalone(): boolean {

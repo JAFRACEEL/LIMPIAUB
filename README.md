@@ -60,7 +60,7 @@ cerrada. Todas las migraciones (`supabase/migrations/*.sql`, incluida
 5. Prueba: entra como trabajadora, activa las notificaciones cuando la app lo
    pida (o desde el ícono 🔔 en la barra), y pide que alguien te mande un
    pedido directo. Debería sonar/vibrar y llegar la notificación aunque la
-   app esté cerrada (en iPhone, solo si instalaste YAVI en la pantalla de
+   app esté cerrada (en iPhone y iPad, solo si instalaste YAVI en la pantalla de
    inicio).
 
 ## Marca e íconos de la app

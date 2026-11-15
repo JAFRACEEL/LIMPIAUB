@@ -110,13 +110,13 @@ export function ActivarNotificaciones() {
       {necesitaInstalarIOS ? (
         <div className="flex flex-col gap-4">
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            <p className="mb-2 font-semibold">En iPhone, primero instala {NOMBRE_APP[APP]} en tu pantalla de inicio:</p>
+            <p className="mb-2 font-semibold">En iPhone o iPad, primero instala {NOMBRE_APP[APP]} en tu pantalla de inicio:</p>
             <ol className="list-decimal space-y-1 pl-5">
               <li>
                 Toca el ícono de <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba) en Safari.
               </li>
               <li>
-                Elige <strong>"Agregar a inicio"</strong>.
+                Elige <strong>"Agregar a inicio"</strong> (o «Agregar a pantalla de inicio»).
               </li>
               <li>Abre {NOMBRE_APP[APP]} desde el ícono que apareció en tu pantalla de inicio (no desde Safari).</li>
               <li>Vuelve a esta pantalla y activa las notificaciones.</li>
