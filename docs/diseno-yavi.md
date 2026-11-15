@@ -20,7 +20,7 @@ Cada build marca `<html data-app="cliente|profesional|admin">` (`vite.config.ts`
 - **Cliente:** naranja YAVI (sin cambios).
 - **Profesional:** verde azulado (teal, `brand-700` #0f766e). Barra del navegador `#0f766e`.
 - **Admin:** violeta (`brand-700` #6d28d9). Barra del navegador `#5b21b6`.
-También cambian la pantalla de inicio (fondo, resplandor, ondas y chispas) y `theme_color`/`background_color` de los manifests. **No cambian** los íconos ni el logo oficial (naranja; no se recolorean) ni los colores de estado (verde éxito, ámbar alerta, rojo error). Tras actualizar, en el iPad hay que quitar el acceso directo y volver a agregarlo para ver el color de la barra y el ícono.
+También cambian la pantalla de inicio (fondo, resplandor, ondas y chispas) y `theme_color`/`background_color` de los manifests. Logo, ícono, favicon e íconos de instalación también tienen variante por app (`public/brand/profesional` y `public/brand/admin`, generadas con `scripts/recolorear-marca.py` a partir de los originales, que no se tocan; el cliente conserva el naranja). **No cambian** los colores de estado (verde éxito, ámbar alerta, rojo error). Tras actualizar, en el iPad hay que quitar el acceso directo y volver a agregarlo para ver el color de la barra y el ícono.
 
 ## Piezas compartidas
 - CSS: `.yavi-tarjeta`, `.yavi-categoria` + `.yavi-burbuja` (la pieza más expresiva), `.yavi-boton-secundario`, `.yavi-aviso[data-tipo]`, `.yavi-esqueleto`. Todo elemento con `bg-brand-700` toma el naranja cálido de arcilla (degradado #ff8a2b → #ec5f10) con texto `brand-ink`.
